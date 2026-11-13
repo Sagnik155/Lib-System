@@ -1,0 +1,803 @@
+{
+  "authors": [
+    {
+      "id": "auth_1",
+      "name": "J.K. Rowling",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "auth_2",
+      "name": "George Orwell",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "auth_3",
+      "name": "Jane Austen",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "auth_4",
+      "name": "Leo Tolstoy",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "auth_5",
+      "name": "F. Scott Fitzgerald",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "auth_6",
+      "name": "Virginia Woolf",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "auth_7",
+      "name": "Ernest Hemingway",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "auth_8",
+      "name": "Gabriel García Márquez",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "auth_9",
+      "name": "Harper Lee",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "auth_10",
+      "name": "Charles Dickens",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "auth_11",
+      "name": "Arthur Conan Doyle",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "auth_12",
+      "name": "Agatha Christie",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat_1",
+      "name": "Computer Science",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "cat_2",
+      "name": "Classic Literature",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "cat_3",
+      "name": "Dystopian Fiction",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "cat_4",
+      "name": "Science & Engineering",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "cat_5",
+      "name": "Mystery & Crime",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "cat_6",
+      "name": "History & Philosophy",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "cat_7",
+      "name": "Economics & Management",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    }
+  ],
+  "books": [
+    {
+      "id": "bk_1",
+      "isbn": "978-0-14-103613-7",
+      "title": "1984",
+      "authorId": "auth_2",
+      "categoryId": "cat_3",
+      "publisher": "Secker & Warburg",
+      "totalCopies": 6,
+      "availableCopies": 4,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_2",
+      "isbn": "978-0-14-103614-4",
+      "title": "Animal Farm",
+      "authorId": "auth_2",
+      "categoryId": "cat_3",
+      "publisher": "Penguin Classics",
+      "totalCopies": 5,
+      "availableCopies": 5,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_3",
+      "isbn": "978-0-14-143951-8",
+      "title": "Pride and Prejudice",
+      "authorId": "auth_3",
+      "categoryId": "cat_2",
+      "publisher": "T. Egerton",
+      "totalCopies": 4,
+      "availableCopies": 3,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_4",
+      "isbn": "978-0-14-143958-7",
+      "title": "Emma",
+      "authorId": "auth_3",
+      "categoryId": "cat_2",
+      "publisher": "John Murray",
+      "totalCopies": 3,
+      "availableCopies": 3,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_5",
+      "isbn": "978-0-14-044913-6",
+      "title": "War and Peace",
+      "authorId": "auth_4",
+      "categoryId": "cat_2",
+      "publisher": "The Russian Messenger",
+      "totalCopies": 4,
+      "availableCopies": 4,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_6",
+      "isbn": "978-0-14-303500-8",
+      "title": "Anna Karenina",
+      "authorId": "auth_4",
+      "categoryId": "cat_2",
+      "publisher": "The Russian Messenger",
+      "totalCopies": 4,
+      "availableCopies": 2,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_7",
+      "isbn": "978-0-7432-7356-5",
+      "title": "The Great Gatsby",
+      "authorId": "auth_5",
+      "categoryId": "cat_2",
+      "publisher": "Charles Scribner's Sons",
+      "totalCopies": 8,
+      "availableCopies": 6,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_8",
+      "isbn": "978-0-15-690739-2",
+      "title": "To the Lighthouse",
+      "authorId": "auth_6",
+      "categoryId": "cat_2",
+      "publisher": "Hogarth Press",
+      "totalCopies": 3,
+      "availableCopies": 3,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_9",
+      "isbn": "978-0-15-662870-9",
+      "title": "Mrs Dalloway",
+      "authorId": "auth_6",
+      "categoryId": "cat_2",
+      "publisher": "Hogarth Press",
+      "totalCopies": 3,
+      "availableCopies": 3,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_10",
+      "isbn": "978-0-684-80122-3",
+      "title": "The Old Man and the Sea",
+      "authorId": "auth_7",
+      "categoryId": "cat_2",
+      "publisher": "Charles Scribner's Sons",
+      "totalCopies": 5,
+      "availableCopies": 5,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_11",
+      "isbn": "978-0-06-088328-7",
+      "title": "One Hundred Years of Solitude",
+      "authorId": "auth_8",
+      "categoryId": "cat_2",
+      "publisher": "Editorial Sudamericana",
+      "totalCopies": 5,
+      "availableCopies": 4,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_12",
+      "isbn": "978-0-06-092979-4",
+      "title": "To Kill a Mockingbird",
+      "authorId": "auth_9",
+      "categoryId": "cat_2",
+      "publisher": "J. B. Lippincott & Co.",
+      "totalCopies": 6,
+      "availableCopies": 4,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_13",
+      "isbn": "978-0-14-143960-0",
+      "title": "Great Expectations",
+      "authorId": "auth_10",
+      "categoryId": "cat_2",
+      "publisher": "Chapman & Hall",
+      "totalCopies": 4,
+      "availableCopies": 4,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_14",
+      "isbn": "978-0-14-143967-9",
+      "title": "A Tale of Two Cities",
+      "authorId": "auth_10",
+      "categoryId": "cat_6",
+      "publisher": "Chapman & Hall",
+      "totalCopies": 5,
+      "availableCopies": 4,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_15",
+      "isbn": "978-0-14-043908-3",
+      "title": "The Adventures of Sherlock Holmes",
+      "authorId": "auth_11",
+      "categoryId": "cat_5",
+      "publisher": "George Newnes",
+      "totalCopies": 7,
+      "availableCopies": 5,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_16",
+      "isbn": "978-0-00-711931-8",
+      "title": "And Then There Were None",
+      "authorId": "auth_12",
+      "categoryId": "cat_5",
+      "publisher": "Collins Crime Club",
+      "totalCopies": 6,
+      "availableCopies": 5,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_17",
+      "isbn": "978-0-00-711932-5",
+      "title": "Murder on the Orient Express",
+      "authorId": "auth_12",
+      "categoryId": "cat_5",
+      "publisher": "Collins Crime Club",
+      "totalCopies": 5,
+      "availableCopies": 4,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_18",
+      "isbn": "978-0-439-06487-3",
+      "title": "Harry Potter and the Sorcerer's Stone",
+      "authorId": "auth_1",
+      "categoryId": "cat_2",
+      "publisher": "Scholastic Press",
+      "totalCopies": 8,
+      "availableCopies": 7,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_19",
+      "isbn": "978-0-439-06486-6",
+      "title": "Harry Potter and the Chamber of Secrets",
+      "authorId": "auth_1",
+      "categoryId": "cat_2",
+      "publisher": "Scholastic Press",
+      "totalCopies": 6,
+      "availableCopies": 5,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_20",
+      "isbn": "978-0-13-110362-7",
+      "title": "The C Programming Language",
+      "authorId": "auth_2",
+      "categoryId": "cat_1",
+      "publisher": "Prentice Hall",
+      "totalCopies": 4,
+      "availableCopies": 3,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_21",
+      "isbn": "978-0-262-03384-8",
+      "title": "Introduction to Algorithms (CLRS)",
+      "authorId": "auth_4",
+      "categoryId": "cat_1",
+      "publisher": "MIT Press",
+      "totalCopies": 5,
+      "availableCopies": 3,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_22",
+      "isbn": "978-0-13-235088-4",
+      "title": "Clean Code: Agile Software Craftsmanship",
+      "authorId": "auth_5",
+      "categoryId": "cat_1",
+      "publisher": "Prentice Hall",
+      "totalCopies": 6,
+      "availableCopies": 5,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_23",
+      "isbn": "978-0-201-61622-4",
+      "title": "The Pragmatic Programmer",
+      "authorId": "auth_6",
+      "categoryId": "cat_1",
+      "publisher": "Addison-Wesley",
+      "totalCopies": 5,
+      "availableCopies": 3,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_24",
+      "isbn": "978-0-596-51774-8",
+      "title": "JavaScript: The Good Parts",
+      "authorId": "auth_7",
+      "categoryId": "cat_1",
+      "publisher": "O'Reilly Media",
+      "totalCopies": 4,
+      "availableCopies": 2,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_25",
+      "isbn": "978-0-13-468599-1",
+      "title": "Effective Java",
+      "authorId": "auth_8",
+      "categoryId": "cat_1",
+      "publisher": "Addison-Wesley",
+      "totalCopies": 5,
+      "availableCopies": 4,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_26",
+      "isbn": "978-1-491-95029-6",
+      "title": "Designing Data-Intensive Applications",
+      "authorId": "auth_9",
+      "categoryId": "cat_1",
+      "publisher": "O'Reilly Media",
+      "totalCopies": 4,
+      "availableCopies": 2,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_27",
+      "isbn": "978-0-321-12521-7",
+      "title": "Domain-Driven Design",
+      "authorId": "auth_10",
+      "categoryId": "cat_1",
+      "publisher": "Addison-Wesley",
+      "totalCopies": 3,
+      "availableCopies": 2,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_28",
+      "isbn": "978-0-06-231609-7",
+      "title": "Sapiens: A Brief History of Humankind",
+      "authorId": "auth_8",
+      "categoryId": "cat_6",
+      "publisher": "Harper",
+      "totalCopies": 6,
+      "availableCopies": 5,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_29",
+      "isbn": "978-0-385-48001-7",
+      "title": "The Wealth of Nations",
+      "authorId": "auth_10",
+      "categoryId": "cat_7",
+      "publisher": "W. Strahan",
+      "totalCopies": 4,
+      "availableCopies": 4,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "bk_30",
+      "isbn": "978-0-13-449416-6",
+      "title": "Clean Architecture: A Craftsman’s Guide",
+      "authorId": "auth_5",
+      "categoryId": "cat_1",
+      "publisher": "Prentice Hall",
+      "totalCopies": 2,
+      "availableCopies": 0,
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    }
+  ],
+  "members": [
+    {
+      "id": "mem_1",
+      "memberCode": "M001",
+      "fullName": "Aarav Sharma",
+      "email": "aarav.sharma@college.edu",
+      "phone": "+91 98765 43210",
+      "membershipType": "Student",
+      "status": "Active",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z",
+      "userId": "usr_student_1"
+    },
+    {
+      "id": "mem_2",
+      "memberCode": "M002",
+      "fullName": "Diya Patel",
+      "email": "diya.patel@college.edu",
+      "phone": "+91 98765 43211",
+      "membershipType": "Student",
+      "status": "Active",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z",
+      "userId": "usr_student_2"
+    },
+    {
+      "id": "mem_3",
+      "memberCode": "M003",
+      "fullName": "Rohan Gupta",
+      "email": "rohan.gupta@college.edu",
+      "phone": "+91 98765 43212",
+      "membershipType": "Student",
+      "status": "Active",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "mem_4",
+      "memberCode": "M004",
+      "fullName": "Ananya Verma",
+      "email": "ananya.verma@college.edu",
+      "phone": "+91 98765 43213",
+      "membershipType": "Student",
+      "status": "Active",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "mem_5",
+      "memberCode": "M005",
+      "fullName": "Kabir Mehta",
+      "email": "kabir.mehta@college.edu",
+      "phone": "+91 98765 43214",
+      "membershipType": "Student",
+      "status": "Inactive",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "mem_6",
+      "memberCode": "M006",
+      "fullName": "Ishaan Nair",
+      "email": "ishaan.nair@college.edu",
+      "phone": "+91 98765 43215",
+      "membershipType": "Student",
+      "status": "Active",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "mem_7",
+      "memberCode": "M007",
+      "fullName": "Meera Iyer",
+      "email": "meera.iyer@college.edu",
+      "phone": "+91 98765 43216",
+      "membershipType": "Student",
+      "status": "Active",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "mem_8",
+      "memberCode": "M008",
+      "fullName": "Aditya Rao",
+      "email": "aditya.rao@college.edu",
+      "phone": "+91 98765 43217",
+      "membershipType": "Student",
+      "status": "Active",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "mem_9",
+      "memberCode": "M009",
+      "fullName": "Pooja Reddy",
+      "email": "pooja.reddy@college.edu",
+      "phone": "+91 98765 43218",
+      "membershipType": "Student",
+      "status": "Active",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "mem_10",
+      "memberCode": "M010",
+      "fullName": "Siddharth Joshi",
+      "email": "siddharth.joshi@college.edu",
+      "phone": "+91 98765 43219",
+      "membershipType": "Student",
+      "status": "Active",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    }
+  ],
+  "users": [
+    {
+      "id": "usr_librarian_1",
+      "email": "librarian@college.edu",
+      "passwordHash": "$2b$10$46av2IkREOjwIRkz/ZoV9O6DI4HnsvJNZKf94T/OpcDdwNywXIWXK",
+      "role": "librarian",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "usr_student_1",
+      "email": "aarav.sharma@college.edu",
+      "passwordHash": "$2b$10$46av2IkREOjwIRkz/ZoV9O6DI4HnsvJNZKf94T/OpcDdwNywXIWXK",
+      "role": "student",
+      "memberId": "mem_1",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "usr_student_2",
+      "email": "diya.patel@college.edu",
+      "passwordHash": "$2b$10$46av2IkREOjwIRkz/ZoV9O6DI4HnsvJNZKf94T/OpcDdwNywXIWXK",
+      "role": "student",
+      "memberId": "mem_2",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "txn_101",
+      "bookId": "bk_30",
+      "memberId": "mem_1",
+      "issuedBy": "usr_librarian_1",
+      "issueDate": "2026-11-02",
+      "dueDate": "2026-11-16",
+      "status": "Issued",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z",
+      "bookTitle": "Clean Architecture: A Craftsman’s Guide",
+      "bookIsbn": "978-0-13-449416-6",
+      "memberCode": "M001",
+      "memberName": "Aarav Sharma"
+    },
+    {
+      "id": "txn_102",
+      "bookId": "bk_30",
+      "memberId": "mem_2",
+      "issuedBy": "usr_librarian_1",
+      "issueDate": "2026-10-31",
+      "dueDate": "2026-11-14",
+      "status": "Issued",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z",
+      "bookTitle": "Clean Architecture: A Craftsman’s Guide",
+      "bookIsbn": "978-0-13-449416-6",
+      "memberCode": "M002",
+      "memberName": "Diya Patel"
+    },
+    {
+      "id": "txn_103",
+      "bookId": "bk_1",
+      "memberId": "mem_2",
+      "issuedBy": "usr_librarian_1",
+      "issueDate": "2026-10-24",
+      "dueDate": "2026-11-07",
+      "status": "Issued",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z",
+      "bookTitle": "1984",
+      "bookIsbn": "978-0-14-103613-7",
+      "memberCode": "M002",
+      "memberName": "Diya Patel"
+    },
+    {
+      "id": "txn_104",
+      "bookId": "bk_3",
+      "memberId": "mem_4",
+      "issuedBy": "usr_librarian_1",
+      "issueDate": "2026-10-26",
+      "dueDate": "2026-11-09",
+      "status": "Issued",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z",
+      "bookTitle": "Pride and Prejudice",
+      "bookIsbn": "978-0-14-143951-8",
+      "memberCode": "M004",
+      "memberName": "Ananya Verma"
+    },
+    {
+      "id": "txn_rohan_1",
+      "bookId": "bk_6",
+      "memberId": "mem_3",
+      "issuedBy": "usr_librarian_1",
+      "issueDate": "2026-11-08",
+      "dueDate": "2026-11-22",
+      "status": "Issued",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z",
+      "bookTitle": "Anna Karenina",
+      "bookIsbn": "978-0-14-303500-8",
+      "memberCode": "M003",
+      "memberName": "Rohan Gupta"
+    },
+    {
+      "id": "txn_rohan_2",
+      "bookId": "bk_7",
+      "memberId": "mem_3",
+      "issuedBy": "usr_librarian_1",
+      "issueDate": "2026-11-08",
+      "dueDate": "2026-11-22",
+      "status": "Issued",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z",
+      "bookTitle": "The Great Gatsby",
+      "bookIsbn": "978-0-7432-7356-5",
+      "memberCode": "M003",
+      "memberName": "Rohan Gupta"
+    },
+    {
+      "id": "txn_rohan_3",
+      "bookId": "bk_11",
+      "memberId": "mem_3",
+      "issuedBy": "usr_librarian_1",
+      "issueDate": "2026-11-08",
+      "dueDate": "2026-11-22",
+      "status": "Issued",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z",
+      "bookTitle": "One Hundred Years of Solitude",
+      "bookIsbn": "978-0-06-088328-7",
+      "memberCode": "M003",
+      "memberName": "Rohan Gupta"
+    },
+    {
+      "id": "txn_rohan_4",
+      "bookId": "bk_15",
+      "memberId": "mem_3",
+      "issuedBy": "usr_librarian_1",
+      "issueDate": "2026-11-08",
+      "dueDate": "2026-11-22",
+      "status": "Issued",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z",
+      "bookTitle": "The Adventures of Sherlock Holmes",
+      "bookIsbn": "978-0-14-043908-3",
+      "memberCode": "M003",
+      "memberName": "Rohan Gupta"
+    },
+    {
+      "id": "txn_rohan_5",
+      "bookId": "bk_16",
+      "memberId": "mem_3",
+      "issuedBy": "usr_librarian_1",
+      "issueDate": "2026-11-08",
+      "dueDate": "2026-11-22",
+      "status": "Issued",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z",
+      "bookTitle": "And Then There Were None",
+      "bookIsbn": "978-0-00-711931-8",
+      "memberCode": "M003",
+      "memberName": "Rohan Gupta"
+    },
+    {
+      "id": "txn_past_1",
+      "bookId": "bk_12",
+      "memberId": "mem_1",
+      "issuedBy": "usr_librarian_1",
+      "issueDate": "2026-10-13",
+      "dueDate": "2026-10-27",
+      "returnDate": "2026-10-31",
+      "status": "Returned",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z",
+      "bookTitle": "To Kill a Mockingbird",
+      "bookIsbn": "978-0-06-092979-4",
+      "memberCode": "M001",
+      "memberName": "Aarav Sharma"
+    }
+  ],
+  "fines": [
+    {
+      "id": "fine_1",
+      "transactionId": "txn_past_1",
+      "memberId": "mem_1",
+      "daysLate": 4,
+      "amount": 20,
+      "status": "Unpaid",
+      "generatedOn": "2026-10-31",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    },
+    {
+      "id": "fine_2",
+      "transactionId": "txn_past_old",
+      "memberId": "mem_2",
+      "daysLate": 3,
+      "amount": 15,
+      "status": "Paid",
+      "generatedOn": "2026-10-29",
+      "paidOn": "2026-11-05",
+      "collectedBy": "usr_librarian_1",
+      "createdAt": "2026-11-12T11:14:06.467Z",
+      "updatedAt": "2026-11-12T11:14:06.467Z"
+    }
+  ]
+}

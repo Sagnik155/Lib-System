@@ -1,0 +1,6 @@
+{
+  "name": "Library Management System",
+  "description": "College-grade Library Management System with MERN stack, role-based access, inventory tracking, issue and return desks, fine calculation, and printable slips.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
