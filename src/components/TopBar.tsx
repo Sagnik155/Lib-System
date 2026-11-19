@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { Search, ChevronDown, Wifi, WifiOff } from 'lucide-react';
 import { getLastSyncTime } from '../utils/offlineCache.ts';
+import { PWAInstallButton } from './PWAInstallButton.tsx';
 
 interface TopBarProps {
   onSearch?: (query: string, filterType: string) => void;
@@ -87,8 +88,9 @@ export const TopBar: React.FC<TopBarProps> = ({ onSearch }) => {
         </div>
       </form>
 
-      {/* Right Controls: Offline Banner & User Profile */}
-      <div className="flex items-center gap-4">
+      {/* Right Controls: Install PWA, Offline Banner & User Profile */}
+      <div className="flex items-center gap-3">
+        <PWAInstallButton />
         {!isOnline ? (
           <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-medium text-amber-800">
             <WifiOff className="w-3.5 h-3.5 text-amber-600" />

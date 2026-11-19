@@ -4,16 +4,23 @@ import { AppError } from '../middleware/errorHandler.ts';
 import { getTodayIndiaString } from '../utils/dateHelper.ts';
 
 export class FineService {
-  public static getFines(status?: 'Unpaid' | 'Paid'): any[] {
-    let list = db.fines;
-    if (status) {
-      list = list.filter(f => f.status === status);
-    }
+  public static async getFines(status?: 'Unpaid' | 'Paid'): Promise<any[]> {
+    const query = status ? { status } : {};
+    const [fines, members, transactions, books] = await Promise.all([
+      db.fines.find(query, { projection: { _id: 0 } }).toArray(),
+      db.members.find({}, { projection: { _id: 0 } }).toArray(),
+      db.transactions.find({}, { projection: { _id: 0 } }).toArray(),
+      db.books.find({}, { projection: { _id: 0 } }).toArray(),
+    ]);
 
-    return list.map(f => {
-      const member = db.members.find(m => m.id === f.memberId);
-      const transaction = db.transactions.find(t => t.id === f.transactionId);
-      const book = transaction ? db.books.find(b => b.id === transaction.bookId) : null;
+    const memberMap = new Map(members.map(m => [m.id, m]));
+    const txnMap = new Map(transactions.map(t => [t.id, t]));
+    const bookMap = new Map(books.map(b => [b.id, b]));
+
+    return fines.map(f => {
+      const member = memberMap.get(f.memberId);
+      const transaction = txnMap.get(f.transactionId);
+      const book = transaction ? bookMap.get(transaction.bookId) : undefined;
 
       return {
         ...f,
@@ -29,27 +36,33 @@ export class FineService {
   /**
    * Pay fine in full
    */
-  public static payFine(fineId: string, librarianUserId: string): {
+  public static async payFine(
+    fineId: string,
+    librarianUserId: string
+  ): Promise<{
     fine: Fine;
     slip: PaymentSlipData;
-  } {
+  }> {
     const today = getTodayIndiaString();
-    
-    // Atomic update: only update where status is Unpaid
-    const updatedFine = db.atomicPayFine(fineId, today, librarianUserId);
+
+    const updatedFine = await db.atomicPayFine(fineId, today, librarianUserId);
     if (!updatedFine) {
-      const fine = db.fines.find(f => f.id === fineId);
-      if (!fine) {
+      const existing = await db.fines.findOne({ id: fineId }, { projection: { _id: 0 } });
+      if (!existing) {
         throw new AppError('Fine record not found', 404, 'FINE_NOT_FOUND');
       }
       throw new AppError('Fine has already been marked as Paid', 400, 'ALREADY_PAID');
     }
 
-    const member = db.members.find(m => m.id === updatedFine.memberId);
-    const transaction = db.transactions.find(t => t.id === updatedFine.transactionId);
-    const book = transaction ? db.books.find(b => b.id === transaction.bookId) : null;
+    const [member, transaction] = await Promise.all([
+      db.members.findOne({ id: updatedFine.memberId }, { projection: { _id: 0 } }),
+      db.transactions.findOne({ id: updatedFine.transactionId }, { projection: { _id: 0 } }),
+    ]);
 
-    // Generate Payment Slip
+    const book = transaction
+      ? await db.books.findOne({ id: transaction.bookId }, { projection: { _id: 0 } })
+      : null;
+
     const slip: PaymentSlipData = {
       fineId: updatedFine.id,
       transactionId: updatedFine.transactionId,

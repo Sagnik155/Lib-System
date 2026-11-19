@@ -1,11 +1,16 @@
-import { db } from '../config/db.ts';
+import { db, exactCaseInsensitive } from '../config/db.ts';
 import { Member } from '../models/types.ts';
 import { AppError } from '../middleware/errorHandler.ts';
 
 export class MemberService {
-  public static getAllMembers(search?: string): Member[] {
-    let list = db.members;
+  public static async getAllMembers(search?: string): Promise<Member[]> {
+    const [members, activeTxns, unpaidFines] = await Promise.all([
+      db.members.find({}, { projection: { _id: 0 } }).toArray(),
+      db.transactions.find({ status: 'Issued' }, { projection: { _id: 0 } }).toArray(),
+      db.fines.find({ status: 'Unpaid' }, { projection: { _id: 0 } }).toArray(),
+    ]);
 
+    let list = members;
     if (search && search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
@@ -17,14 +22,10 @@ export class MemberService {
       );
     }
 
-    // Hydrate active loans count & unpaid fine total
     return list.map(m => {
-      const activeLoansCount = db.transactions.filter(
-        t => t.memberId === m.id && t.status === 'Issued'
-      ).length;
-
-      const unpaidFinesTotal = db.fines
-        .filter(f => f.memberId === m.id && f.status === 'Unpaid')
+      const activeLoansCount = activeTxns.filter(t => t.memberId === m.id).length;
+      const unpaidFinesTotal = unpaidFines
+        .filter(f => f.memberId === m.id)
         .reduce((sum, f) => sum + f.amount, 0);
 
       return {
@@ -35,19 +36,21 @@ export class MemberService {
     });
   }
 
-  public static getMemberById(id: string): Member {
-    const member = db.members.find(m => m.id === id || m.memberCode.toLowerCase() === id.toLowerCase());
+  public static async getMemberById(id: string): Promise<Member> {
+    const member = await db.members.findOne(
+      { $or: [{ id }, { memberCode: exactCaseInsensitive(id) }] },
+      { projection: { _id: 0 } }
+    );
     if (!member) {
       throw new AppError('Member not found', 404, 'MEMBER_NOT_FOUND');
     }
 
-    const activeLoansCount = db.transactions.filter(
-      t => t.memberId === member.id && t.status === 'Issued'
-    ).length;
+    const [activeLoansCount, unpaidFines] = await Promise.all([
+      db.transactions.countDocuments({ memberId: member.id, status: 'Issued' }),
+      db.fines.find({ memberId: member.id, status: 'Unpaid' }, { projection: { _id: 0 } }).toArray(),
+    ]);
 
-    const unpaidFinesTotal = db.fines
-      .filter(f => f.memberId === member.id && f.status === 'Unpaid')
-      .reduce((sum, f) => sum + f.amount, 0);
+    const unpaidFinesTotal = unpaidFines.reduce((sum, f) => sum + f.amount, 0);
 
     return {
       ...member,
@@ -56,32 +59,40 @@ export class MemberService {
     };
   }
 
-  public static createMember(data: {
+  public static async createMember(data: {
     fullName: string;
     email: string;
     phone: string;
     membershipType?: string;
     memberCode?: string;
-  }): Member {
+  }): Promise<Member> {
     if (!data.fullName || !data.email) {
       throw new AppError('Full name and email are required', 400, 'VALIDATION_ERROR');
     }
 
     const normalizedEmail = data.email.trim().toLowerCase();
-    if (db.members.some(m => m.email.toLowerCase() === normalizedEmail)) {
+    const existingEmail = await db.members.findOne(
+      { email: exactCaseInsensitive(normalizedEmail) },
+      { projection: { _id: 0 } }
+    );
+    if (existingEmail) {
       throw new AppError('A member with this email already exists', 409, 'DUPLICATE_EMAIL');
     }
 
-    // Generate or validate member code (e.g. M001)
     let memberCode = data.memberCode?.trim().toUpperCase();
     if (!memberCode) {
-      const highestNum = db.members.reduce((max, m) => {
+      const allMembers = await db.members.find({}, { projection: { _id: 0, memberCode: 1 } }).toArray();
+      const highestNum = allMembers.reduce((max, m) => {
         const match = m.memberCode.match(/M(\d+)/i);
         return match ? Math.max(max, parseInt(match[1], 10)) : max;
       }, 0);
       memberCode = `M${String(highestNum + 1).padStart(3, '0')}`;
     } else {
-      if (db.members.some(m => m.memberCode.toUpperCase() === memberCode)) {
+      const existingCode = await db.members.findOne(
+        { memberCode: exactCaseInsensitive(memberCode) },
+        { projection: { _id: 0 } }
+      );
+      if (existingCode) {
         throw new AppError('A member with this code already exists', 409, 'DUPLICATE_MEMBER_CODE');
       }
     }
@@ -99,12 +110,11 @@ export class MemberService {
       updatedAt: now,
     };
 
-    db.members.push(newMember);
-    db.save();
+    await db.members.insertOne({ ...newMember });
     return newMember;
   }
 
-  public static updateMember(
+  public static async updateMember(
     id: string,
     data: {
       fullName?: string;
@@ -113,46 +123,53 @@ export class MemberService {
       membershipType?: string;
       status?: 'Active' | 'Inactive';
     }
-  ): Member {
-    const member = db.members.find(m => m.id === id);
+  ): Promise<Member> {
+    const member = await db.members.findOne({ id }, { projection: { _id: 0 } });
     if (!member) {
       throw new AppError('Member not found', 404, 'MEMBER_NOT_FOUND');
     }
 
+    const updates: Partial<Member> = {
+      updatedAt: new Date().toISOString(),
+    };
+
     if (data.email) {
       const normalizedEmail = data.email.trim().toLowerCase();
-      if (
-        normalizedEmail !== member.email.toLowerCase() &&
-        db.members.some(m => m.email.toLowerCase() === normalizedEmail)
-      ) {
-        throw new AppError('Email is already in use by another member', 409, 'DUPLICATE_EMAIL');
+      if (normalizedEmail !== member.email.toLowerCase()) {
+        const emailConflict = await db.members.findOne(
+          { id: { $ne: id }, email: exactCaseInsensitive(normalizedEmail) },
+          { projection: { _id: 0 } }
+        );
+        if (emailConflict) {
+          throw new AppError('Email is already in use by another member', 409, 'DUPLICATE_EMAIL');
+        }
       }
-      member.email = normalizedEmail;
+      updates.email = normalizedEmail;
     }
 
-    if (data.fullName !== undefined) member.fullName = data.fullName.trim();
-    if (data.phone !== undefined) member.phone = data.phone.trim();
-    if (data.membershipType !== undefined) member.membershipType = data.membershipType.trim();
-    if (data.status !== undefined) member.status = data.status;
+    if (data.fullName !== undefined) updates.fullName = data.fullName.trim();
+    if (data.phone !== undefined) updates.phone = data.phone.trim();
+    if (data.membershipType !== undefined) updates.membershipType = data.membershipType.trim();
+    if (data.status !== undefined) updates.status = data.status;
 
-    member.updatedAt = new Date().toISOString();
-    db.save();
-    return member;
+    await db.members.updateOne({ id }, { $set: updates });
+    return { ...member, ...updates };
   }
 
   /**
    * Delete protection: A member with active unreturned transactions cannot be deleted.
    */
-  public static deleteMember(id: string): void {
-    const memberIndex = db.members.findIndex(m => m.id === id);
-    if (memberIndex === -1) {
+  public static async deleteMember(id: string): Promise<void> {
+    const member = await db.members.findOne({ id }, { projection: { _id: 0 } });
+    if (!member) {
       throw new AppError('Member not found', 404, 'MEMBER_NOT_FOUND');
     }
 
-    const hasActiveTransactions = db.transactions.some(
-      t => t.memberId === id && t.status === 'Issued'
-    );
-    if (hasActiveTransactions) {
+    const activeCount = await db.transactions.countDocuments({
+      memberId: id,
+      status: 'Issued',
+    });
+    if (activeCount > 0) {
       throw new AppError(
         'Cannot delete member with active book loans. Return all books first.',
         400,
@@ -160,14 +177,10 @@ export class MemberService {
       );
     }
 
-    // Also remove associated user account if any
-    const member = db.members[memberIndex];
     if (member.userId) {
-      const uIndex = db.users.findIndex(u => u.id === member.userId);
-      if (uIndex !== -1) db.users.splice(uIndex, 1);
+      await db.users.deleteOne({ id: member.userId });
     }
 
-    db.members.splice(memberIndex, 1);
-    db.save();
+    await db.members.deleteOne({ id });
   }
 }

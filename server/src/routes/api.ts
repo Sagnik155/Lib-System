@@ -11,7 +11,6 @@ import { DashboardService } from '../services/dashboardService.ts';
 const router = Router();
 
 // ======================== AUTHENTICATION ========================
-// Public: Login
 router.post('/auth/login', async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -22,7 +21,6 @@ router.post('/auth/login', async (req, res, next) => {
   }
 });
 
-// Public: Student Account Activation
 router.post('/auth/activate', async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -36,10 +34,9 @@ router.post('/auth/activate', async (req, res, next) => {
 // ======================== PROTECTED ROUTES (DENY BY DEFAULT) ========================
 router.use(authMiddleware);
 
-// Current User Profile
-router.get('/auth/me', (req: AuthenticatedRequest, res: Response, next) => {
+router.get('/auth/me', async (req: AuthenticatedRequest, res: Response, next) => {
   try {
-    const user = AuthService.getCurrentUser(req.user!.userId);
+    const user = await AuthService.getCurrentUser(req.user!.userId);
     res.json(user);
   } catch (err) {
     next(err);
@@ -47,71 +44,73 @@ router.get('/auth/me', (req: AuthenticatedRequest, res: Response, next) => {
 });
 
 // ======================== CATALOGUE & SEARCH (ANY LOGGED IN USER) ========================
-router.get('/books', (_req, res, next) => {
+router.get('/books', async (_req, res, next) => {
   try {
-    res.json(CatalogueService.getAllBooks());
+    res.json(await CatalogueService.getAllBooks());
   } catch (err) {
     next(err);
   }
 });
 
-router.get('/books/:id', (req, res, next) => {
+router.get('/books/:id', async (req, res, next) => {
   try {
-    res.json(CatalogueService.getBookById(req.params.id));
+    res.json(await CatalogueService.getBookById(req.params.id));
   } catch (err) {
     next(err);
   }
 });
 
-router.get('/authors', (_req, res, next) => {
+router.get('/authors', async (_req, res, next) => {
   try {
-    res.json(CatalogueService.getAllAuthors());
+    res.json(await CatalogueService.getAllAuthors());
   } catch (err) {
     next(err);
   }
 });
 
-router.get('/categories', (_req, res, next) => {
+router.get('/categories', async (_req, res, next) => {
   try {
-    res.json(CatalogueService.getAllCategories());
+    res.json(await CatalogueService.getAllCategories());
   } catch (err) {
     next(err);
   }
 });
 
-// Multi-attribute search with availability & earliest expected return
-router.get('/search', (req, res, next) => {
+router.get('/search', async (req, res, next) => {
   try {
     const q = req.query.q as string;
     const category = req.query.category as string;
     const availability = req.query.availability as any;
-    res.json(SearchService.search(q, category, availability));
+    res.json(await SearchService.search(q, category, availability));
   } catch (err) {
     next(err);
   }
 });
 
 // ======================== STUDENT SCOPED ROUTES ========================
-// Server-side student scoping: uses req.user.memberId exclusively
-router.get('/me/books', (req: AuthenticatedRequest, res: Response, next) => {
+router.get('/me/books', async (req: AuthenticatedRequest, res: Response, next) => {
   try {
     if (!req.user?.memberId) {
-      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'User is not linked to a student member profile' } });
+      res.status(403).json({
+        error: { code: 'FORBIDDEN', message: 'User is not linked to a student member profile' },
+      });
       return;
     }
-    res.json(DashboardService.getStudentBooks(req.user.memberId));
+    res.json(await DashboardService.getStudentBooks(req.user.memberId));
   } catch (err) {
     next(err);
   }
 });
 
-router.get('/me/fines', (req: AuthenticatedRequest, res: Response, next) => {
+router.get('/me/fines', async (req: AuthenticatedRequest, res: Response, next) => {
   try {
     if (!req.user?.memberId) {
-      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'User is not linked to a student member profile' } });
+      res.status(403).json({
+        error: { code: 'FORBIDDEN', message: 'User is not linked to a student member profile' },
+      });
       return;
     }
-    res.json(DashboardService.getStudentFines(req.user.memberId));
+    res.json(await DashboardService.getStudentFines(req.user.memberId));
   } catch (err) {
     next(err);
   }
@@ -121,44 +120,44 @@ router.get('/me/fines', (req: AuthenticatedRequest, res: Response, next) => {
 router.use(roleMiddleware(['librarian']));
 
 // Member Management
-router.get('/members', (req, res, next) => {
+router.get('/members', async (req, res, next) => {
   try {
     const search = req.query.search as string;
-    res.json(MemberService.getAllMembers(search));
+    res.json(await MemberService.getAllMembers(search));
   } catch (err) {
     next(err);
   }
 });
 
-router.get('/members/:id', (req, res, next) => {
+router.get('/members/:id', async (req, res, next) => {
   try {
-    res.json(MemberService.getMemberById(req.params.id));
+    res.json(await MemberService.getMemberById(req.params.id));
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/members', (req, res, next) => {
+router.post('/members', async (req, res, next) => {
   try {
-    const member = MemberService.createMember(req.body);
+    const member = await MemberService.createMember(req.body);
     res.status(201).json(member);
   } catch (err) {
     next(err);
   }
 });
 
-router.put('/members/:id', (req, res, next) => {
+router.put('/members/:id', async (req, res, next) => {
   try {
-    const member = MemberService.updateMember(req.params.id, req.body);
+    const member = await MemberService.updateMember(req.params.id, req.body);
     res.json(member);
   } catch (err) {
     next(err);
   }
 });
 
-router.delete('/members/:id', (req, res, next) => {
+router.delete('/members/:id', async (req, res, next) => {
   try {
-    MemberService.deleteMember(req.params.id);
+    await MemberService.deleteMember(req.params.id);
     res.json({ message: 'Member deleted successfully' });
   } catch (err) {
     next(err);
@@ -166,37 +165,36 @@ router.delete('/members/:id', (req, res, next) => {
 });
 
 // Catalogue Management
-router.post('/books', (req, res, next) => {
+router.post('/books', async (req, res, next) => {
   try {
-    const book = CatalogueService.createBook(req.body);
+    const book = await CatalogueService.createBook(req.body);
     res.status(201).json(book);
   } catch (err) {
     next(err);
   }
 });
 
-router.put('/books/:id', (req, res, next) => {
+router.put('/books/:id', async (req, res, next) => {
   try {
-    const book = CatalogueService.updateBook(req.params.id, req.body);
+    const book = await CatalogueService.updateBook(req.params.id, req.body);
     res.json(book);
   } catch (err) {
     next(err);
   }
 });
 
-router.delete('/books/:id', (req, res, next) => {
+router.delete('/books/:id', async (req, res, next) => {
   try {
-    CatalogueService.deleteBook(req.params.id);
+    await CatalogueService.deleteBook(req.params.id);
     res.json({ message: 'Book deleted successfully' });
   } catch (err) {
     next(err);
   }
 });
 
-// Bulk Import Books
-router.post('/books/import', (req, res, next) => {
+router.post('/books/import', async (req, res, next) => {
   try {
-    const result = CatalogueService.bulkImport(req.body.rows);
+    const result = await CatalogueService.bulkImport(req.body.rows);
     res.status(200).json(result);
   } catch (err) {
     next(err);
@@ -204,34 +202,34 @@ router.post('/books/import', (req, res, next) => {
 });
 
 // Authors & Categories Management
-router.post('/authors', (req, res, next) => {
+router.post('/authors', async (req, res, next) => {
   try {
-    res.status(201).json(CatalogueService.createAuthor(req.body.name));
+    res.status(201).json(await CatalogueService.createAuthor(req.body.name));
   } catch (err) {
     next(err);
   }
 });
 
-router.delete('/authors/:id', (req, res, next) => {
+router.delete('/authors/:id', async (req, res, next) => {
   try {
-    CatalogueService.deleteAuthor(req.params.id);
+    await CatalogueService.deleteAuthor(req.params.id);
     res.json({ message: 'Author deleted successfully' });
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/categories', (req, res, next) => {
+router.post('/categories', async (req, res, next) => {
   try {
-    res.status(201).json(CatalogueService.createCategory(req.body.name));
+    res.status(201).json(await CatalogueService.createCategory(req.body.name));
   } catch (err) {
     next(err);
   }
 });
 
-router.delete('/categories/:id', (req, res, next) => {
+router.delete('/categories/:id', async (req, res, next) => {
   try {
-    CatalogueService.deleteCategory(req.params.id);
+    await CatalogueService.deleteCategory(req.params.id);
     res.json({ message: 'Category deleted successfully' });
   } catch (err) {
     next(err);
@@ -239,56 +237,56 @@ router.delete('/categories/:id', (req, res, next) => {
 });
 
 // Issue & Return Desks
-router.get('/issues/active', (req, res, next) => {
+router.get('/issues/active', async (req, res, next) => {
   try {
     const search = req.query.search as string;
-    res.json(IssueReturnService.getActiveLoans(search));
+    res.json(await IssueReturnService.getActiveLoans(search));
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/issues', (req: AuthenticatedRequest, res: Response, next) => {
+router.post('/issues', async (req: AuthenticatedRequest, res: Response, next) => {
   try {
     const { bookId, memberCode } = req.body;
-    const result = IssueReturnService.issueBook(bookId, memberCode, req.user!.userId);
+    const result = await IssueReturnService.issueBook(bookId, memberCode, req.user!.userId);
     res.status(201).json(result);
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/returns/:transactionId', (req: AuthenticatedRequest, res: Response, next) => {
+router.post('/returns/:transactionId', async (req: AuthenticatedRequest, res: Response, next) => {
   try {
-    const result = IssueReturnService.returnBook(req.params.transactionId, req.user!.userId);
+    const result = await IssueReturnService.returnBook(req.params.transactionId, req.user!.userId);
     res.json(result);
   } catch (err) {
     next(err);
   }
 });
 
-router.get('/returns/history', (req, res, next) => {
+router.get('/returns/history', async (req, res, next) => {
   try {
     const search = req.query.search as string;
-    res.json(IssueReturnService.getReturnedLoans(search));
+    res.json(await IssueReturnService.getReturnedLoans(search));
   } catch (err) {
     next(err);
   }
 });
 
 // Fines Management
-router.get('/fines', (req, res, next) => {
+router.get('/fines', async (req, res, next) => {
   try {
     const status = req.query.status as any;
-    res.json(FineService.getFines(status));
+    res.json(await FineService.getFines(status));
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/fines/:id/pay', (req: AuthenticatedRequest, res: Response, next) => {
+router.post('/fines/:id/pay', async (req: AuthenticatedRequest, res: Response, next) => {
   try {
-    const result = FineService.payFine(req.params.id, req.user!.userId);
+    const result = await FineService.payFine(req.params.id, req.user!.userId);
     res.json(result);
   } catch (err) {
     next(err);
@@ -296,17 +294,17 @@ router.post('/fines/:id/pay', (req: AuthenticatedRequest, res: Response, next) =
 });
 
 // Dashboard Analytics & Overdue Reports
-router.get('/dashboard', (_req, res, next) => {
+router.get('/dashboard', async (_req, res, next) => {
   try {
-    res.json(DashboardService.getDashboardStats());
+    res.json(await DashboardService.getDashboardStats());
   } catch (err) {
     next(err);
   }
 });
 
-router.get('/reports/overdue', (_req, res, next) => {
+router.get('/reports/overdue', async (_req, res, next) => {
   try {
-    res.json(DashboardService.getOverdueReport());
+    res.json(await DashboardService.getOverdueReport());
   } catch (err) {
     next(err);
   }

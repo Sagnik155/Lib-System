@@ -2,23 +2,29 @@ import { db } from '../config/db.ts';
 import { Book } from '../models/types.ts';
 
 export class SearchService {
-  public static search(query?: string, categoryId?: string, availability?: 'all' | 'available' | 'unavailable'): Book[] {
+  public static async search(
+    query?: string,
+    categoryId?: string,
+    availability?: 'all' | 'available' | 'unavailable'
+  ): Promise<Book[]> {
     const q = query?.trim().toLowerCase() || '';
 
-    // Join books with authors & categories
-    let results: Book[] = db.books.map(b => {
-      const author = db.authors.find(a => a.id === b.authorId);
-      const category = db.categories.find(c => c.id === b.categoryId);
+    const [books, authors, categories, activeTransactions] = await Promise.all([
+      db.books.find({}, { projection: { _id: 0 } }).toArray(),
+      db.authors.find({}, { projection: { _id: 0 } }).toArray(),
+      db.categories.find({}, { projection: { _id: 0 } }).toArray(),
+      db.transactions.find({ status: 'Issued' }, { projection: { _id: 0 } }).toArray(),
+    ]);
 
-      // If book has 0 available copies, calculate earliest expected return date
+    const authorMap = new Map(authors.map(a => [a.id, a.name]));
+    const categoryMap = new Map(categories.map(c => [c.id, c.name]));
+
+    let results: Book[] = books.map(b => {
       let earliestExpectedReturnDate: string | null = null;
       if (b.availableCopies === 0) {
-        const activeTransactions = db.transactions.filter(
-          t => t.bookId === b.id && t.status === 'Issued'
-        );
-        if (activeTransactions.length > 0) {
-          // Sort ascending by dueDate
-          const sortedDueDates = activeTransactions
+        const bookActive = activeTransactions.filter(t => t.bookId === b.id);
+        if (bookActive.length > 0) {
+          const sortedDueDates = bookActive
             .map(t => t.dueDate)
             .sort((d1, d2) => d1.localeCompare(d2));
           earliestExpectedReturnDate = sortedDueDates[0] || null;
@@ -27,13 +33,12 @@ export class SearchService {
 
       return {
         ...b,
-        authorName: author?.name || 'Unknown Author',
-        categoryName: category?.name || 'Uncategorized',
+        authorName: authorMap.get(b.authorId) || 'Unknown Author',
+        categoryName: categoryMap.get(b.categoryId) || 'Uncategorized',
         earliestExpectedReturnDate,
       };
     });
 
-    // Partial text match across title, author name, category name, and ISBN
     if (q) {
       results = results.filter(
         b =>

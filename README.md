@@ -1,6 +1,6 @@
 # Library Management System
 
-A full-stack college **Library Management System** engineered with **React 19**, **Vite**, **Tailwind CSS v4**, **Node.js**, and **Express**. Designed around strict server-enforced business rules, role-based access control (RBAC), India Standard Time (`Asia/Kolkata`) calendar-day fine calculation, offline-resilient catalogue lookup, and standalone print/PDF circulation receipts.
+A full-stack college **Library Management System** engineered with **React 19**, **Vite**, **Tailwind CSS v4**, **Node.js**, **Express**, and **MongoDB Atlas**. Designed around strict server-enforced business rules, role-based access control (RBAC), India Standard Time (`Asia/Kolkata`) calendar-day fine calculation, offline-resilient catalogue lookup, and standalone print/PDF circulation receipts.
 
 ---
 
@@ -32,7 +32,7 @@ College circulation desks require deterministic enforcement of borrowing quotas,
 * **Server-Authoritative Policy Enforcement:** Borrowing limits (`5` books), loan durations (`14` days), fine rates (`₹5/day`), and RBAC checks are evaluated exclusively on the backend—never trusted to client UI state.
 * **Deny-by-Default Security Boundary:** Every endpoint after `/api/auth/login` and `/api/auth/activate` requires a verified JWT (`authMiddleware`), and administrative endpoints enforce `roleMiddleware(['librarian'])`.
 * **Timezone-Safe Calendar Arithmetic:** Due dates and overdue penalties operate on whole `YYYY-MM-DD` calendar dates anchored to India Standard Time (`Asia/Kolkata`), eliminating UTC midnight off-by-one bugs.
-* **Zero-Dependency Runtime Footprint:** Persists relational entities to a local JSON store (`.db_store.json`) with auto-seeding on startup so the entire application boots cleanly in a single command without external database provisioning.
+* **Cloud Persistence with Atomic Guards:** Stores all 7 collections (`authors`, `categories`, `books`, `members`, `users`, `transactions`, `fines`) in **MongoDB Atlas** using the official `mongodb` Node.js driver with unique indexes, atomic `findOneAndUpdate` inventory/fine transitions, and automatic demo seeding on an empty database.
 
 ---
 
@@ -96,10 +96,10 @@ College circulation desks require deterministic enforcement of borrowing quotas,
 ┌─────────┴──────────────────────────────────────────────────┴──────────────┐
 │               Single-Port Express Server + Vite Middleware                │
 │  ┌──────────────────────┐   ┌─────────────────────┐   ┌────────────────┐  │
-│  │ Security & Routing   │──▶│ Domain Services     │──▶│ JSON Store     │  │
-│  │ - JWT Auth Guard     │   │ - Catalogue & Search│   │ (.db_store.json│  │
-│  │ - Role Middleware    │   │ - Issue/Return/Fine │   │  + Atomic Ops) │  │
-│  │ - Member Scoping     │   │ - IST Date Engine   │   │ - Auto-Seed    │  │
+│  │ Security & Routing   │──▶│ Domain Services     │──▶│ MongoDB Atlas  │  │
+│  │ - JWT Auth Guard     │   │ - Catalogue & Search│   │ (7 Collections │  │
+│  │ - Role Middleware    │   │ - Issue/Return/Fine │   │  + Indexes +   │  │
+│  │ - Member Scoping     │   │ - IST Date Engine   │   │  Atomic Ops)   │  │
 │  └──────────────────────┘   └─────────────────────┘   └────────────────┘  │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
@@ -110,7 +110,7 @@ College circulation desks require deterministic enforcement of borrowing quotas,
 * In **development**, `server.ts` creates an `http.Server`, mounts Express `/api` routes first, and attaches **Vite in `middlewareMode`** with HMR bound to the same HTTP server (avoiding secondary WebSocket port collisions, or disabling HMR when `DISABLE_HMR=true`).
 * In **production** (`NODE_ENV=production`), Express serves the compiled static bundle from `dist/` with SPA fallback routing.
 * CLI flag parsing (`--port`, `--host`) takes precedence over environment variables so managed runtimes (e.g., `--port 3000 --host 0.0.0.0`) bind reliably.
-* On startup, if `db.books` or `db.users` is empty, `runSeed()` populates 30 books, 10 members, active/overdue/returned transactions, fines, and demo credentials automatically.
+* On startup, `connectDb()` connects to **MongoDB Atlas** via `MONGODB_URI`, ensures unique indexes, and automatically calls `runSeed()` if `books` or `users` is empty.
 
 #### 2. Authentication, RBAC & Data Isolation
 * Passwords are salted and hashed with `bcryptjs` (cost factor `10`).
@@ -138,7 +138,7 @@ atomicReturnCopy(bookId) ─▶ availableCopies + 1 ─▶ Transaction (Returned
                        atomicPayFine(fineId) ─▶ Paid ─▶ Payment Receipt (Reprintable)
 ```
 
-* `db.atomicIssueCopy`, `db.atomicReturnCopy`, and `db.atomicPayFine` enforce conditional bounds (`availableCopies > 0`, `availableCopies < totalCopies`, `status === 'Unpaid'`) synchronously before calling `db.save()`, preventing negative stock, over-stocking, or double fine settlement within the Node process.
+* `db.atomicIssueCopy`, `db.atomicReturnCopy`, and `db.atomicPayFine` execute conditional MongoDB `findOneAndUpdate` operations (`availableCopies > 0`, `$expr: { $lt: ['$availableCopies', '$totalCopies'] }`, `status: 'Unpaid'`), preventing negative stock, over-stocking, or double fine settlement even under concurrent requests.
 
 #### 4. IST (`Asia/Kolkata`) Calendar-Day Date Engine
 * `getTodayIndiaString()` formats the current instant via `Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' })` to produce a canonical `YYYY-MM-DD` string.
@@ -245,7 +245,8 @@ When issuing fails, `POST /api/issues` returns all applicable reasons in `error.
 | Symptom | Root Cause | Resolution |
 | :--- | :--- | :--- |
 | Server fails to start with `EADDRINUSE` on `8080` or `24678` | Environment `PORT` or standalone Vite HMR port conflict | Pass explicit port/host (`tsx server.ts --port 3000 --host 0.0.0.0`) or set `DISABLE_HMR=true` |
-| Empty catalogue / login fails on fresh clone | `.db_store.json` missing or corrupted | Run `npm run seed` (or delete `.db_store.json` and restart `npm run dev` to trigger auto-seed) |
+| Server fails to start with `MONGODB_URI is not configured` or timeout | Missing URI or Atlas IP whitelist blocked | Add `MONGODB_URI` to `.env` / Secrets and allow `0.0.0.0/0` under MongoDB Atlas **Network Access** |
+| Empty catalogue / login fails on fresh database | Collections not seeded | Run `npm run seed` (or `npm run migrate-json` to import a legacy `.db_store.json` into Atlas) |
 | Need an additional Librarian login | Librarian role cannot be self-registered in UI | Run `npm run create-librarian -- <email> <password>` |
 | Frontend deployed separately from API cannot reach `/api` | Default `VITE_API_BASE_URL="/api"` assumes same-origin server | Set `VITE_API_BASE_URL=https://<api-host>/api` and add CORS middleware on the Express server |
 | Bulk import rejects spreadsheet or skips rows | Missing headers or duplicate ISBNs | Download the sample template from the Import modal; required columns: `isbn`, `title`, `author`, `category`, `total_copies` |
@@ -256,21 +257,20 @@ When issuing fails, `POST /api/issues` returns all applicable reasons in `error.
 
 For academic and engineering evaluation, this section documents the genuine limitations of the current implementation alongside the architectural trade-offs that produced them.
 
-### 1. Flat-File JSON Persistence & Single-Process Concurrency
-* **Current State:** Although `.env.example` includes a template `MONGODB_URI`, the active backend persists all collections inside a single local `.db_store.json` file via synchronous `fs.writeFileSync`.
+### 1. Document-Level Atomicity vs. Multi-Document Transactions
+* **Current State:** The backend connects live to **MongoDB Atlas** with unique indexes and single-document atomic `findOneAndUpdate` guards (`atomicIssueCopy`, `atomicReturnCopy`, `atomicPayFine`).
 * **Shortcomings:**
-  * **Crash Durability Risk:** Overwriting `.db_store.json` directly in-place (without atomic temp-file write + rename or a write-ahead log) risks file truncation if the Node process crashes mid-write.
-  * **No Multi-Instance Scaling:** Atomic helpers (`atomicIssueCopy`, `atomicReturnCopy`, `atomicPayFine`) are only safe inside a single Node.js event loop; running multiple server replicas or horizontal workers would cause lost updates and race conditions.
-  * **Write Amplification:** Every single book issue, return, or fine payment serializes and rewrites the entire database JSON synchronously on the main thread, blocking the event loop at larger dataset sizes.
-* **Trade-Off:** Chosen for zero-configuration portability and instant local/container startup without provisioning MongoDB or PostgreSQL.
+  * **No Multi-Document ACID Transactions:** Issuing or returning a book executes stock adjustment and transaction/fine insertion as sequential MongoDB operations rather than wrapping them inside a `session.withTransaction(...)` block—so a mid-request network drop between stock update and transaction insert could leave an inconsistent count.
+  * **Application-Side Joins:** Services like `SearchService`, `FineService`, and `DashboardService` fetch related collections in parallel and hydrate them in memory (`Map` lookups) rather than using MongoDB `$lookup` aggregation pipelines with server-side pagination.
+* **Trade-Off:** Kept queries clean, portable across M0 free-tier clusters, and easy to follow without complex aggregation pipelines.
 
 ### 2. Authentication & Security Boundaries
-* **Current State:** JWTs are signed with `process.env.JWT_SECRET` falling back to a hardcoded string (`library-mgmt-secret-jwt-key-2026`), stored client-side in `localStorage`, and the Sidebar exposes a **Demo Switcher** calling `quickLoginAs(email)` with `'password123'`.
+* **Current State:** JWTs are signed with `process.env.JWT_SECRET` falling back to a default key (`library-mgmt-secret-jwt-key-2026`), stored client-side in `localStorage`, and `LoginPage` exposes a top-right **Demo Credentials** dropdown with copy buttons for seeded accounts.
 * **Shortcomings:**
   * **XSS Exposure & No Revocation:** Storing JWTs in `localStorage` makes tokens readable to any injected script (unlike `HttpOnly; SameSite=Strict` cookies), and stateless JWTs cannot be server-revoked before their `7d` expiration on logout or password change.
-  * **Unverified Student Activation:** `POST /api/auth/activate` verifies only that the email exists in `db.members` without sending an email OTP or verification link—allowing someone who knows an unactivated student's email address to claim that account first.
-  * **Demo Switcher & Default Secret Risk:** Leaving the hardcoded secret fallback or one-click Demo Switcher active in a non-demo deployment would compromise administrative access; additionally, no rate limiting (`express-rate-limit`) or Helmet CSP headers are enabled on `/api/auth/*`.
-* **Trade-Off:** Prioritized frictionless evaluator walkthroughs and rapid demo role-switching over production identity verification.
+  * **Unverified Student Activation:** `POST /api/auth/activate` verifies only that the email exists in `members` without sending an email OTP or verification link—allowing someone who knows an unactivated student's email address to claim that account first.
+  * **Demo Credentials & Default Secret Risk:** Leaving the hardcoded secret fallback or public Demo Credentials dropdown active in a non-demo deployment would compromise administrative access; additionally, no rate limiting (`express-rate-limit`) or Helmet CSP headers are enabled on `/api/auth/*`.
+* **Trade-Off:** Prioritized smooth evaluator walkthroughs while still demonstrating real manual login flows.
 
 ### 3. Offline Mode Is In-Session & Read-Only
 * **Current State:** `CataloguePage` caches the result of the latest `/api/search` call into IndexedDB (`LibraryAppCatalogueCache`) and reads it back on network failure.
@@ -288,12 +288,12 @@ For academic and engineering evaluation, this section documents the genuine limi
   * **Uniform Policy Rules:** Loan period (`14` days), borrow limit (`5` books), and late fee (`₹5/day`) are hardcoded constants rather than configurable per membership tier (e.g., Faculty vs. Undergraduate) or adjustable by librarians (no renewals, partial fine payments, or fee waivers).
 * **Trade-Off:** Simplified the domain model to seven flat collections (`authors`, `categories`, `books`, `members`, `users`, `transactions`, `fines`) so circulation workflows remain fast and unambiguous.
 
-### 5. In-Memory Query Execution & Payload Limits
-* **Current State:** Service methods scan entire arrays in memory (`db.books.map(...)`, `db.transactions.filter(...)`) and return unpaginated JSON arrays.
+### 5. Unpaginated Collection Reads & Payload Limits
+* **Current State:** List endpoints fetch full collections from MongoDB (`find({}).toArray()`) and filter/hydrate them in application memory.
 * **Shortcomings:**
-  * **No Server Pagination or Indexing:** Latency and response payload sizes scale linearly (`O(N)`) with total books, members, and historical transactions (`getReturnedLoans`, `getFines`, `getDashboardStats`).
-  * **Repeated Client-Server Coupling:** `src/pages/CataloguePage.tsx` and other frontend views import `formatDisplayDate` directly from `server/src/utils/dateHelper.ts` rather than a shared `shared/` module, and `.env.example` lists unused placeholders (`GEMINI_API_KEY`, `MONGODB_URI`, `CLIENT_ORIGIN`) without corresponding runtime wiring or CORS middleware for split-origin deployments.
-* **Trade-Off:** Rapid feature iteration inside a monorepo layout without maintaining separate API pagination DTOs or shared workspace packages.
+  * **No Server Pagination:** Latency and response payload sizes scale linearly (`O(N)`) with total books, members, and historical transactions (`getReturnedLoans`, `getFines`, `getDashboardStats`).
+  * **Repeated Client-Server Coupling:** Frontend views import `formatDisplayDate` directly from `server/src/utils/dateHelper.ts` rather than a dedicated `shared/` package, and split-origin deployments would require adding CORS middleware for `CLIENT_ORIGIN`.
+* **Trade-Off:** Rapid feature iteration inside a monorepo layout without maintaining separate pagination DTOs or shared workspace packages.
 
 ### 6. Testing, Observability & Audit Trail Gaps
 * **Current State:** Verified through TypeScript compilation (`tsc --noEmit`), Vite production builds, and live HTTP smoke checks.
@@ -307,7 +307,7 @@ For academic and engineering evaluation, this section documents the genuine limi
 
 ### Pre-Seeded Demo Accounts
 
-A **Demo Switcher** is available in the bottom-left sidebar for one-click role switching during evaluation:
+A **Demo Credentials** dropdown in the top-right corner of the login screen displays the seeded login IDs and passwords with one-click Copy buttons for evaluation:
 
 | Role | Email | Password | Pre-Seeded State |
 | :--- | :--- | :--- | :--- |
@@ -325,13 +325,16 @@ A **Demo Switcher** is available in the bottom-left sidebar for one-click role s
 # 1. Install all frontend and backend dependencies
 npm install
 
-# 2. (Optional) Configure environment variables
+# 2. Configure environment variables (set your MongoDB Atlas MONGODB_URI)
 cp .env.example .env
 
-# 3. Seed demo books (30), members (10), transactions, fines, and accounts
+# 3. Seed demo books (30), members (10), transactions, fines, and accounts into Atlas
 npm run seed
 
-# 4. (Optional) Provision an additional librarian account
+# 3b. (Alternative) Import an existing local .db_store.json snapshot into MongoDB Atlas
+npm run migrate-json
+
+# 4. (Optional) Provision an additional librarian account in MongoDB Atlas
 npm run create-librarian -- new.librarian@college.edu strongpassword123
 
 # 5. Start full-stack server (Express API + Vite middleware on port 3000)

@@ -1,10 +1,21 @@
+import 'dotenv/config';
 import bcrypt from 'bcryptjs';
-import { db } from '../src/config/db.ts';
+import { connectDb, closeDb, db, exactCaseInsensitive } from '../src/config/db.ts';
 import { User } from '../src/models/types.ts';
 
-export async function createLibrarian(email = 'admin.librarian@college.edu', password = 'password123') {
+export async function createLibrarian(
+  email = 'admin.librarian@college.edu',
+  password = 'password123'
+) {
+  if (!db.isConnected()) {
+    await connectDb();
+  }
+
   const normalizedEmail = email.trim().toLowerCase();
-  const existing = db.users.find(u => u.email.toLowerCase() === normalizedEmail);
+  const existing = await db.users.findOne(
+    { email: exactCaseInsensitive(normalizedEmail) },
+    { projection: { _id: 0 } }
+  );
 
   if (existing) {
     console.log(`⚠️ User with email ${normalizedEmail} already exists (role: ${existing.role}).`);
@@ -23,23 +34,24 @@ export async function createLibrarian(email = 'admin.librarian@college.edu', pas
     updatedAt: now,
   };
 
-  db.users.push(user);
-  db.save();
+  await db.users.insertOne({ ...user });
 
-  console.log('✅ Librarian created successfully:');
+  console.log('✅ Librarian created successfully in MongoDB Atlas:');
   console.log(`   Email: ${normalizedEmail}`);
   console.log(`   Password: ${password}`);
   return user;
 }
 
-// Auto-run if executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   const email = process.argv[2] || 'admin.librarian@college.edu';
   const password = process.argv[3] || 'password123';
-  createLibrarian(email, password)
+  connectDb()
+    .then(() => createLibrarian(email, password))
+    .then(() => closeDb())
     .then(() => process.exit(0))
-    .catch(err => {
+    .catch(async err => {
       console.error('Failed to create librarian:', err);
+      await closeDb();
       process.exit(1);
     });
 }

@@ -9,7 +9,6 @@ import {
   Receipt,
   UserCheck,
   LogOut,
-  Sparkles,
 } from 'lucide-react';
 
 export type NavTab =
@@ -27,7 +26,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
-  const { user, logout, quickLoginAs } = useAuth();
+  const { user, logout } = useAuth();
   const isLibrarian = user?.role === 'librarian';
 
   const navItems = isLibrarian
@@ -85,56 +84,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
         </nav>
       </div>
 
-      {/* Bottom Demo Switcher & Logout */}
-      <div className="p-4 border-t border-slate-100 space-y-3">
-        {/* Viva / Demo Quick Account Switcher */}
-        <div className="p-3 bg-slate-50 border border-slate-200/70 rounded-xl">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-emerald-600" />
-              Demo Switcher
-            </span>
-            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-semibold">
-              Quick Switch
-            </span>
-          </div>
-
-          <div className="space-y-1 text-xs">
-            <button
-              onClick={() => quickLoginAs('librarian@college.edu')}
-              className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                user?.role === 'librarian'
-                  ? 'bg-emerald-600 text-white font-semibold'
-                  : 'text-slate-700 hover:bg-slate-200/70'
-              }`}
-            >
-              Librarian (Full Admin)
-            </button>
-            <button
-              onClick={() => quickLoginAs('aarav.sharma@college.edu')}
-              className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                user?.email === 'aarav.sharma@college.edu'
-                  ? 'bg-emerald-600 text-white font-semibold'
-                  : 'text-slate-700 hover:bg-slate-200/70'
-              }`}
-            >
-              Student: Aarav (1 fine)
-            </button>
-            <button
-              onClick={() => quickLoginAs('diya.patel@college.edu')}
-              className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                user?.email === 'diya.patel@college.edu'
-                  ? 'bg-emerald-600 text-white font-semibold'
-                  : 'text-slate-700 hover:bg-slate-200/70'
-              }`}
-            >
-              Student: Diya (Overdue)
-            </button>
-          </div>
-        </div>
-
-        {/* User Card & Logout */}
-        <div className="flex items-center justify-between pt-1">
+      {/* Bottom User Card & Logout */}
+      <div className="p-4 border-t border-slate-100">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-700 shrink-0">
               {user?.email[0].toUpperCase()}

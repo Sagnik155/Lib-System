@@ -3,29 +3,40 @@ import { getTodayIndiaString, diffInDays } from '../utils/dateHelper.ts';
 import { FINE_RATE_PER_DAY } from '../utils/constants.ts';
 
 export class DashboardService {
-  public static getDashboardStats() {
+  public static async getDashboardStats() {
     const today = getTodayIndiaString();
 
-    const totalTitles = db.books.length;
-    const totalCopies = db.books.reduce((acc, b) => acc + b.totalCopies, 0);
-    const availableCopies = db.books.reduce((acc, b) => acc + b.availableCopies, 0);
-    
-    const activeLoans = db.transactions.filter(t => t.status === 'Issued');
-    const returnedLoans = db.transactions.filter(t => t.status === 'Returned');
-    
+    const [books, authors, members, transactions, fines] = await Promise.all([
+      db.books.find({}, { projection: { _id: 0 } }).toArray(),
+      db.authors.find({}, { projection: { _id: 0 } }).toArray(),
+      db.members.find({}, { projection: { _id: 0 } }).toArray(),
+      db.transactions.find({}, { projection: { _id: 0 } }).toArray(),
+      db.fines.find({}, { projection: { _id: 0 } }).toArray(),
+    ]);
+
+    const bookMap = new Map(books.map(b => [b.id, b]));
+    const authorMap = new Map(authors.map(a => [a.id, a]));
+    const memberMap = new Map(members.map(m => [m.id, m]));
+
+    const totalTitles = books.length;
+    const totalCopies = books.reduce((acc, b) => acc + b.totalCopies, 0);
+    const availableCopies = books.reduce((acc, b) => acc + b.availableCopies, 0);
+
+    const activeLoans = transactions.filter(t => t.status === 'Issued');
+    const returnedLoans = transactions.filter(t => t.status === 'Returned');
+
     const overdueLoans = activeLoans.filter(t => diffInDays(t.dueDate, today) < 0);
-    const missingOutOfStock = db.books.filter(b => b.availableCopies === 0).length;
+    const missingOutOfStock = books.filter(b => b.availableCopies === 0).length;
 
-    const totalMembers = db.members.length;
-    const activeMembers = db.members.filter(m => m.status === 'Active').length;
+    const totalMembers = members.length;
+    const activeMembers = members.filter(m => m.status === 'Active').length;
 
-    const unpaidFines = db.fines.filter(f => f.status === 'Unpaid');
+    const unpaidFines = fines.filter(f => f.status === 'Unpaid');
     const pendingFeesTotal = unpaidFines.reduce((sum, f) => sum + f.amount, 0);
 
-    // Overdue list with member and book info
     const overdueList = overdueLoans.map(t => {
-      const book = db.books.find(b => b.id === t.bookId);
-      const member = db.members.find(m => m.id === t.memberId);
+      const book = bookMap.get(t.bookId);
+      const member = memberMap.get(t.memberId);
       const daysLate = Math.abs(diffInDays(t.dueDate, today));
       const fineAmount = daysLate * FINE_RATE_PER_DAY;
 
@@ -41,14 +52,13 @@ export class DashboardService {
       };
     });
 
-    // Recent check-outs (last 10)
-    const recentCheckouts = [...db.transactions]
+    const recentCheckouts = [...transactions]
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, 8)
       .map(t => {
-        const book = db.books.find(b => b.id === t.bookId);
-        const member = db.members.find(m => m.id === t.memberId);
-        const author = book ? db.authors.find(a => a.id === book.authorId) : null;
+        const book = bookMap.get(t.bookId);
+        const member = memberMap.get(t.memberId);
+        const author = book ? authorMap.get(book.authorId) : undefined;
 
         return {
           id: t.id,
@@ -64,9 +74,8 @@ export class DashboardService {
         };
       });
 
-    // Top books / new arrivals
-    const topBooks = db.books.slice(0, 5).map(b => {
-      const author = db.authors.find(a => a.id === b.authorId);
+    const topBooks = books.slice(0, 5).map(b => {
+      const author = authorMap.get(b.authorId);
       return {
         id: b.id,
         title: b.title,
@@ -96,14 +105,21 @@ export class DashboardService {
     };
   }
 
-  public static getOverdueReport() {
+  public static async getOverdueReport() {
     const today = getTodayIndiaString();
-    const activeLoans = db.transactions.filter(t => t.status === 'Issued');
+    const [activeLoans, books, members] = await Promise.all([
+      db.transactions.find({ status: 'Issued' }, { projection: { _id: 0 } }).toArray(),
+      db.books.find({}, { projection: { _id: 0 } }).toArray(),
+      db.members.find({}, { projection: { _id: 0 } }).toArray(),
+    ]);
+
+    const bookMap = new Map(books.map(b => [b.id, b]));
+    const memberMap = new Map(members.map(m => [m.id, m]));
     const overdueLoans = activeLoans.filter(t => diffInDays(t.dueDate, today) < 0);
 
     return overdueLoans.map(t => {
-      const book = db.books.find(b => b.id === t.bookId);
-      const member = db.members.find(m => m.id === t.memberId);
+      const book = bookMap.get(t.bookId);
+      const member = memberMap.get(t.memberId);
       const daysLate = Math.abs(diffInDays(t.dueDate, today));
       const fineAmount = daysLate * FINE_RATE_PER_DAY;
 
@@ -124,15 +140,22 @@ export class DashboardService {
     });
   }
 
-  public static getStudentBooks(memberId: string) {
+  public static async getStudentBooks(memberId: string) {
     const today = getTodayIndiaString();
-    const memberTransactions = db.transactions.filter(t => t.memberId === memberId);
+    const [memberTransactions, books, authors] = await Promise.all([
+      db.transactions.find({ memberId }, { projection: { _id: 0 } }).toArray(),
+      db.books.find({}, { projection: { _id: 0 } }).toArray(),
+      db.authors.find({}, { projection: { _id: 0 } }).toArray(),
+    ]);
+
+    const bookMap = new Map(books.map(b => [b.id, b]));
+    const authorMap = new Map(authors.map(a => [a.id, a]));
 
     const currentIssued = memberTransactions
       .filter(t => t.status === 'Issued')
       .map(t => {
-        const book = db.books.find(b => b.id === t.bookId);
-        const author = book ? db.authors.find(a => a.id === book.authorId) : null;
+        const book = bookMap.get(t.bookId);
+        const author = book ? authorMap.get(book.authorId) : undefined;
         const daysRemaining = diffInDays(t.dueDate, today);
         const isOverdue = daysRemaining < 0;
         const daysOverdue = isOverdue ? Math.abs(daysRemaining) : 0;
@@ -153,8 +176,8 @@ export class DashboardService {
     const history = memberTransactions
       .filter(t => t.status === 'Returned')
       .map(t => {
-        const book = db.books.find(b => b.id === t.bookId);
-        const author = book ? db.authors.find(a => a.id === book.authorId) : null;
+        const book = bookMap.get(t.bookId);
+        const author = book ? authorMap.get(book.authorId) : undefined;
         return {
           ...t,
           bookTitle: book?.title || t.bookTitle || 'Unknown Title',
@@ -166,12 +189,19 @@ export class DashboardService {
     return { currentIssued, history };
   }
 
-  public static getStudentFines(memberId: string) {
-    const fines = db.fines.filter(f => f.memberId === memberId);
+  public static async getStudentFines(memberId: string) {
+    const [fines, transactions, books] = await Promise.all([
+      db.fines.find({ memberId }, { projection: { _id: 0 } }).toArray(),
+      db.transactions.find({ memberId }, { projection: { _id: 0 } }).toArray(),
+      db.books.find({}, { projection: { _id: 0 } }).toArray(),
+    ]);
+
+    const txnMap = new Map(transactions.map(t => [t.id, t]));
+    const bookMap = new Map(books.map(b => [b.id, b]));
 
     return fines.map(f => {
-      const transaction = db.transactions.find(t => t.id === f.transactionId);
-      const book = transaction ? db.books.find(b => b.id === transaction.bookId) : null;
+      const transaction = txnMap.get(f.transactionId);
+      const book = transaction ? bookMap.get(transaction.bookId) : undefined;
 
       return {
         ...f,

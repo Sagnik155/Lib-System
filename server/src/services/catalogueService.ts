@@ -1,19 +1,25 @@
-import { db } from '../config/db.ts';
+import { db, exactCaseInsensitive } from '../config/db.ts';
 import { Book, Author, Category } from '../models/types.ts';
 import { AppError } from '../middleware/errorHandler.ts';
 
 export class CatalogueService {
   // ===================== AUTHORS =====================
-  public static getAllAuthors(): Author[] {
-    return [...db.authors].sort((a, b) => a.name.localeCompare(b.name));
+  public static async getAllAuthors(): Promise<Author[]> {
+    return db.authors
+      .find({}, { projection: { _id: 0 } })
+      .sort({ name: 1 })
+      .toArray();
   }
 
-  public static createAuthor(name: string): Author {
+  public static async createAuthor(name: string): Promise<Author> {
     if (!name || !name.trim()) {
       throw new AppError('Author name is required', 400, 'VALIDATION_ERROR');
     }
     const trimmed = name.trim();
-    const existing = db.authors.find(a => a.name.toLowerCase() === trimmed.toLowerCase());
+    const existing = await db.authors.findOne(
+      { name: exactCaseInsensitive(trimmed) },
+      { projection: { _id: 0 } }
+    );
     if (existing) return existing;
 
     const now = new Date().toISOString();
@@ -23,33 +29,42 @@ export class CatalogueService {
       createdAt: now,
       updatedAt: now,
     };
-    db.authors.push(author);
-    db.save();
+    await db.authors.insertOne({ ...author });
     return author;
   }
 
-  public static deleteAuthor(id: string): void {
-    const hasBooks = db.books.some(b => b.authorId === id);
-    if (hasBooks) {
-      throw new AppError('Cannot delete an author who still has books in the catalogue', 400, 'AUTHOR_HAS_BOOKS');
+  public static async deleteAuthor(id: string): Promise<void> {
+    const booksCount = await db.books.countDocuments({ authorId: id });
+    if (booksCount > 0) {
+      throw new AppError(
+        'Cannot delete an author who still has books in the catalogue',
+        400,
+        'AUTHOR_HAS_BOOKS'
+      );
     }
-    const idx = db.authors.findIndex(a => a.id === id);
-    if (idx === -1) throw new AppError('Author not found', 404, 'NOT_FOUND');
-    db.authors.splice(idx, 1);
-    db.save();
+    const res = await db.authors.deleteOne({ id });
+    if (res.deletedCount === 0) {
+      throw new AppError('Author not found', 404, 'NOT_FOUND');
+    }
   }
 
   // ===================== CATEGORIES =====================
-  public static getAllCategories(): Category[] {
-    return [...db.categories].sort((a, b) => a.name.localeCompare(b.name));
+  public static async getAllCategories(): Promise<Category[]> {
+    return db.categories
+      .find({}, { projection: { _id: 0 } })
+      .sort({ name: 1 })
+      .toArray();
   }
 
-  public static createCategory(name: string): Category {
+  public static async createCategory(name: string): Promise<Category> {
     if (!name || !name.trim()) {
       throw new AppError('Category name is required', 400, 'VALIDATION_ERROR');
     }
     const trimmed = name.trim();
-    const existing = db.categories.find(c => c.name.toLowerCase() === trimmed.toLowerCase());
+    const existing = await db.categories.findOne(
+      { name: exactCaseInsensitive(trimmed) },
+      { projection: { _id: 0 } }
+    );
     if (existing) return existing;
 
     const now = new Date().toISOString();
@@ -59,41 +74,55 @@ export class CatalogueService {
       createdAt: now,
       updatedAt: now,
     };
-    db.categories.push(category);
-    db.save();
+    await db.categories.insertOne({ ...category });
     return category;
   }
 
-  public static deleteCategory(id: string): void {
-    const hasBooks = db.books.some(b => b.categoryId === id);
-    if (hasBooks) {
-      throw new AppError('Cannot delete a category that still has books in the catalogue', 400, 'CATEGORY_HAS_BOOKS');
+  public static async deleteCategory(id: string): Promise<void> {
+    const booksCount = await db.books.countDocuments({ categoryId: id });
+    if (booksCount > 0) {
+      throw new AppError(
+        'Cannot delete a category that still has books in the catalogue',
+        400,
+        'CATEGORY_HAS_BOOKS'
+      );
     }
-    const idx = db.categories.findIndex(c => c.id === id);
-    if (idx === -1) throw new AppError('Category not found', 404, 'NOT_FOUND');
-    db.categories.splice(idx, 1);
-    db.save();
+    const res = await db.categories.deleteOne({ id });
+    if (res.deletedCount === 0) {
+      throw new AppError('Category not found', 404, 'NOT_FOUND');
+    }
   }
 
   // ===================== BOOKS =====================
-  public static getAllBooks(): Book[] {
-    return db.books.map(b => {
-      const author = db.authors.find(a => a.id === b.authorId);
-      const category = db.categories.find(c => c.id === b.categoryId);
-      return {
-        ...b,
-        authorName: author?.name || 'Unknown Author',
-        categoryName: category?.name || 'Uncategorized',
-      };
-    });
+  public static async getAllBooks(): Promise<Book[]> {
+    const [books, authors, categories] = await Promise.all([
+      db.books.find({}, { projection: { _id: 0 } }).toArray(),
+      db.authors.find({}, { projection: { _id: 0 } }).toArray(),
+      db.categories.find({}, { projection: { _id: 0 } }).toArray(),
+    ]);
+
+    const authorMap = new Map(authors.map(a => [a.id, a.name]));
+    const categoryMap = new Map(categories.map(c => [c.id, c.name]));
+
+    return books.map(b => ({
+      ...b,
+      authorName: authorMap.get(b.authorId) || 'Unknown Author',
+      categoryName: categoryMap.get(b.categoryId) || 'Uncategorized',
+    }));
   }
 
-  public static getBookById(id: string): Book {
-    const book = db.books.find(b => b.id === id || b.isbn === id);
+  public static async getBookById(id: string): Promise<Book> {
+    const book = await db.books.findOne(
+      { $or: [{ id }, { isbn: exactCaseInsensitive(id) }] },
+      { projection: { _id: 0 } }
+    );
     if (!book) throw new AppError('Book not found', 404, 'BOOK_NOT_FOUND');
 
-    const author = db.authors.find(a => a.id === book.authorId);
-    const category = db.categories.find(c => c.id === book.categoryId);
+    const [author, category] = await Promise.all([
+      db.authors.findOne({ id: book.authorId }, { projection: { _id: 0 } }),
+      db.categories.findOne({ id: book.categoryId }, { projection: { _id: 0 } }),
+    ]);
+
     return {
       ...book,
       authorName: author?.name || 'Unknown Author',
@@ -101,7 +130,7 @@ export class CatalogueService {
     };
   }
 
-  public static createBook(data: {
+  public static async createBook(data: {
     isbn: string;
     title: string;
     authorId?: string;
@@ -110,16 +139,21 @@ export class CatalogueService {
     categoryName?: string;
     publisher?: string;
     totalCopies: number;
-  }): Book {
+  }): Promise<Book> {
     if (!data.isbn || !data.title || data.totalCopies === undefined) {
       throw new AppError('ISBN, title, and totalCopies are required', 400, 'VALIDATION_ERROR');
     }
 
     const cleanIsbn = String(data.isbn).trim();
-    const duplicateBook = db.books.find(b => b.isbn.toLowerCase() === cleanIsbn.toLowerCase());
+    const duplicateBook = await db.books.findOne(
+      { isbn: exactCaseInsensitive(cleanIsbn) },
+      { projection: { _id: 0 } }
+    );
     if (duplicateBook) {
-      const existingAuthor = db.authors.find(a => a.id === duplicateBook.authorId);
-      const existingCategory = db.categories.find(c => c.id === duplicateBook.categoryId);
+      const [existingAuthor, existingCategory] = await Promise.all([
+        db.authors.findOne({ id: duplicateBook.authorId }, { projection: { _id: 0 } }),
+        db.categories.findOne({ id: duplicateBook.categoryId }, { projection: { _id: 0 } }),
+      ]);
       throw new AppError(
         `Invalid ISBN: "${cleanIsbn}" is already assigned to "${duplicateBook.title}".`,
         409,
@@ -134,18 +168,16 @@ export class CatalogueService {
       );
     }
 
-    // Resolve or create author
     let authorId = data.authorId;
     if (!authorId && data.authorName) {
-      const auth = this.createAuthor(data.authorName);
+      const auth = await this.createAuthor(data.authorName);
       authorId = auth.id;
     }
     if (!authorId) throw new AppError('Author is required', 400, 'VALIDATION_ERROR');
 
-    // Resolve or create category
     let categoryId = data.categoryId;
     if (!categoryId && data.categoryName) {
-      const cat = this.createCategory(data.categoryName);
+      const cat = await this.createCategory(data.categoryName);
       categoryId = cat.id;
     }
     if (!categoryId) throw new AppError('Category is required', 400, 'VALIDATION_ERROR');
@@ -166,11 +198,13 @@ export class CatalogueService {
       updatedAt: now,
     };
 
-    db.books.push(newBook);
-    db.save();
+    await db.books.insertOne({ ...newBook });
 
-    const author = db.authors.find(a => a.id === authorId);
-    const category = db.categories.find(c => c.id === categoryId);
+    const [author, category] = await Promise.all([
+      db.authors.findOne({ id: authorId }, { projection: { _id: 0 } }),
+      db.categories.findOne({ id: categoryId }, { projection: { _id: 0 } }),
+    ]);
+
     return {
       ...newBook,
       authorName: author?.name,
@@ -178,7 +212,7 @@ export class CatalogueService {
     };
   }
 
-  public static updateBook(
+  public static async updateBook(
     id: string,
     data: {
       isbn?: string;
@@ -190,21 +224,28 @@ export class CatalogueService {
       publisher?: string;
       totalCopies?: number;
     }
-  ): Book {
-    const book = db.books.find(b => b.id === id);
+  ): Promise<Book> {
+    const book = await db.books.findOne({ id }, { projection: { _id: 0 } });
     if (!book) throw new AppError('Book not found', 404, 'BOOK_NOT_FOUND');
+
+    const updates: Partial<Book> = {
+      updatedAt: new Date().toISOString(),
+    };
 
     if (data.isbn !== undefined) {
       const cleanIsbn = String(data.isbn).trim();
       if (!cleanIsbn) {
         throw new AppError('ISBN cannot be empty', 400, 'VALIDATION_ERROR');
       }
-      const conflict = db.books.find(
-        b => b.id !== id && b.isbn.toLowerCase() === cleanIsbn.toLowerCase()
+      const conflict = await db.books.findOne(
+        { id: { $ne: id }, isbn: exactCaseInsensitive(cleanIsbn) },
+        { projection: { _id: 0 } }
       );
       if (conflict) {
-        const conflictAuthor = db.authors.find(a => a.id === conflict.authorId);
-        const conflictCategory = db.categories.find(c => c.id === conflict.categoryId);
+        const [conflictAuthor, conflictCategory] = await Promise.all([
+          db.authors.findOne({ id: conflict.authorId }, { projection: { _id: 0 } }),
+          db.categories.findOne({ id: conflict.categoryId }, { projection: { _id: 0 } }),
+        ]);
         throw new AppError(
           `Invalid ISBN: "${cleanIsbn}" is already assigned to "${conflict.title}".`,
           409,
@@ -218,14 +259,13 @@ export class CatalogueService {
           }
         );
       }
-      book.isbn = cleanIsbn;
+      updates.isbn = cleanIsbn;
     }
 
     if (data.totalCopies !== undefined) {
       const newTotal = Math.max(0, Math.floor(Number(data.totalCopies)));
       const currentlyIssued = book.totalCopies - book.availableCopies;
-      
-      // Total copies cannot be set lower than the number of copies currently issued
+
       if (newTotal < currentlyIssued) {
         throw new AppError(
           `Cannot reduce total copies below ${currentlyIssued} (copies currently issued)`,
@@ -233,35 +273,35 @@ export class CatalogueService {
           'COPIES_LESS_THAN_ISSUED'
         );
       }
-      book.availableCopies = newTotal - currentlyIssued;
-      book.totalCopies = newTotal;
+      updates.availableCopies = newTotal - currentlyIssued;
+      updates.totalCopies = newTotal;
     }
 
-    if (data.title) book.title = data.title.trim();
+    if (data.title) updates.title = data.title.trim();
     if (data.authorId) {
-      book.authorId = data.authorId;
+      updates.authorId = data.authorId;
     } else if (data.authorName && data.authorName.trim()) {
-      book.authorId = this.createAuthor(data.authorName).id;
+      updates.authorId = (await this.createAuthor(data.authorName)).id;
     }
     if (data.categoryId) {
-      book.categoryId = data.categoryId;
+      updates.categoryId = data.categoryId;
     } else if (data.categoryName && data.categoryName.trim()) {
-      book.categoryId = this.createCategory(data.categoryName).id;
+      updates.categoryId = (await this.createCategory(data.categoryName)).id;
     }
-    if (data.publisher !== undefined) book.publisher = data.publisher.trim() || 'University Press';
+    if (data.publisher !== undefined) {
+      updates.publisher = data.publisher.trim() || 'University Press';
+    }
 
-    book.updatedAt = new Date().toISOString();
-    db.save();
-
-    return this.getBookById(book.id);
+    await db.books.updateOne({ id }, { $set: updates });
+    return this.getBookById(id);
   }
 
-  public static deleteBook(id: string): void {
-    // A book with any active (unreturned) transaction cannot be deleted
-    const hasActiveTransactions = db.transactions.some(
-      t => t.bookId === id && t.status === 'Issued'
-    );
-    if (hasActiveTransactions) {
+  public static async deleteBook(id: string): Promise<void> {
+    const activeLoansCount = await db.transactions.countDocuments({
+      bookId: id,
+      status: 'Issued',
+    });
+    if (activeLoansCount > 0) {
       throw new AppError(
         'Cannot delete a book with active loans. Return all copies first.',
         400,
@@ -269,10 +309,10 @@ export class CatalogueService {
       );
     }
 
-    const idx = db.books.findIndex(b => b.id === id);
-    if (idx === -1) throw new AppError('Book not found', 404, 'BOOK_NOT_FOUND');
-    db.books.splice(idx, 1);
-    db.save();
+    const res = await db.books.deleteOne({ id });
+    if (res.deletedCount === 0) {
+      throw new AppError('Book not found', 404, 'BOOK_NOT_FOUND');
+    }
   }
 
   /**
@@ -281,14 +321,16 @@ export class CatalogueService {
    * skips and reports duplicate/invalid rows, never overwrites an existing book,
    * creates missing authors and categories, up to 1,000 rows.
    */
-  public static bulkImport(rows: Array<{
-    isbn?: string | number;
-    title?: string;
-    author?: string;
-    category?: string;
-    publisher?: string;
-    total_copies?: number | string;
-  }>) {
+  public static async bulkImport(
+    rows: Array<{
+      isbn?: string | number;
+      title?: string;
+      author?: string;
+      category?: string;
+      publisher?: string;
+      total_copies?: number | string;
+    }>
+  ) {
     if (!Array.isArray(rows) || rows.length === 0) {
       throw new AppError('No rows provided for import', 400, 'EMPTY_IMPORT');
     }
@@ -297,10 +339,19 @@ export class CatalogueService {
       throw new AppError('File exceeds maximum limit of 1,000 rows per import', 400, 'LIMIT_EXCEEDED');
     }
 
-    const imported: Book[] = [];
-    const skipped: Array<{ row: number; isbn: string; reason: string }> = [];
+    const [existingBooks, existingAuthors, existingCategories] = await Promise.all([
+      db.books.find({}, { projection: { _id: 0, isbn: 1 } }).toArray(),
+      db.authors.find({}, { projection: { _id: 0 } }).toArray(),
+      db.categories.find({}, { projection: { _id: 0 } }).toArray(),
+    ]);
 
-    // Track seen ISBNs in this batch
+    const existingIsbns = new Set(existingBooks.map(b => b.isbn.toLowerCase()));
+    const authorByName = new Map<string, Author>(existingAuthors.map(a => [a.name.toLowerCase(), a]));
+    const categoryByName = new Map<string, Category>(existingCategories.map(c => [c.name.toLowerCase(), c]));
+
+    const imported: Book[] = [];
+    const booksToInsert: Book[] = [];
+    const skipped: Array<{ row: number; isbn: string; reason: string }> = [];
     const batchSeenIsbns = new Set<string>();
 
     for (let i = 0; i < rows.length; i++) {
@@ -322,7 +373,8 @@ export class CatalogueService {
         continue;
       }
 
-      if (batchSeenIsbns.has(rawIsbn.toLowerCase())) {
+      const lowerIsbn = rawIsbn.toLowerCase();
+      if (batchSeenIsbns.has(lowerIsbn)) {
         skipped.push({
           row: rowNum,
           isbn: rawIsbn,
@@ -331,7 +383,7 @@ export class CatalogueService {
         continue;
       }
 
-      if (db.books.some(b => b.isbn.toLowerCase() === rawIsbn.toLowerCase())) {
+      if (existingIsbns.has(lowerIsbn)) {
         skipped.push({
           row: rowNum,
           isbn: rawIsbn,
@@ -340,18 +392,23 @@ export class CatalogueService {
         continue;
       }
 
-      batchSeenIsbns.add(rawIsbn.toLowerCase());
+      batchSeenIsbns.add(lowerIsbn);
 
-      // Auto-create author & category if needed
-      let author = db.authors.find(a => a.name.toLowerCase() === rawAuthor.toLowerCase());
-      if (!author) author = this.createAuthor(rawAuthor);
+      let author = authorByName.get(rawAuthor.toLowerCase());
+      if (!author) {
+        author = await this.createAuthor(rawAuthor);
+        authorByName.set(author.name.toLowerCase(), author);
+      }
 
-      let category = db.categories.find(c => c.name.toLowerCase() === rawCategory.toLowerCase());
-      if (!category) category = this.createCategory(rawCategory);
+      let category = categoryByName.get(rawCategory.toLowerCase());
+      if (!category) {
+        category = await this.createCategory(rawCategory);
+        categoryByName.set(category.name.toLowerCase(), category);
+      }
 
       const now = new Date().toISOString();
       const newBook: Book = {
-        id: `bk_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        id: `bk_${Date.now()}_${i}_${Math.random().toString(36).substring(2, 6)}`,
         isbn: rawIsbn,
         title: rawTitle,
         authorId: author.id,
@@ -361,15 +418,19 @@ export class CatalogueService {
         availableCopies: copiesNum,
         createdAt: now,
         updatedAt: now,
-        authorName: author.name,
-        categoryName: category.name,
       };
 
-      db.books.push(newBook);
-      imported.push(newBook);
+      booksToInsert.push(newBook);
+      imported.push({
+        ...newBook,
+        authorName: author.name,
+        categoryName: category.name,
+      });
     }
 
-    db.save();
+    if (booksToInsert.length > 0) {
+      await db.books.insertMany(booksToInsert.map(b => ({ ...b })));
+    }
 
     return {
       totalRows: rows.length,

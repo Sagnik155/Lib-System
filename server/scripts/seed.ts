@@ -1,12 +1,17 @@
+import 'dotenv/config';
 import bcrypt from 'bcryptjs';
-import { db } from '../src/config/db.ts';
+import { connectDb, closeDb, db } from '../src/config/db.ts';
 import { Author, Category, Book, Member, User, Transaction, Fine } from '../src/models/types.ts';
 import { getTodayIndiaString, addDays } from '../src/utils/dateHelper.ts';
 
 export async function runSeed() {
-  console.log('🌱 Starting database seed with fictional demo data...');
+  console.log('🌱 Starting MongoDB Atlas database seed with demo data...');
 
-  db.resetAll();
+  if (!db.isConnected()) {
+    await connectDb();
+  }
+
+  await db.resetAll();
   const now = new Date().toISOString();
   const today = getTodayIndiaString();
 
@@ -32,9 +37,8 @@ export async function runSeed() {
     createdAt: now,
     updatedAt: now,
   }));
-  authors.forEach(a => db.authors.push(a));
 
-  // 2. Categories (at least 5)
+  // 2. Categories
   const categoryNames = [
     'Computer Science',
     'Classic Literature',
@@ -51,9 +55,8 @@ export async function runSeed() {
     createdAt: now,
     updatedAt: now,
   }));
-  categories.forEach(c => db.categories.push(c));
 
-  // 3. Books (~30 books, varied copy counts, including one with 0 available copies)
+  // 3. Books (30 titles, including 1 with 0 available copies)
   const rawBooksData = [
     { isbn: '978-0-14-103613-7', title: '1984', authorIdx: 1, catIdx: 2, publisher: 'Secker & Warburg', total: 6, avail: 4 },
     { isbn: '978-0-14-103614-4', title: 'Animal Farm', authorIdx: 1, catIdx: 2, publisher: 'Penguin Classics', total: 5, avail: 5 },
@@ -84,7 +87,6 @@ export async function runSeed() {
     { isbn: '978-0-321-12521-7', title: 'Domain-Driven Design', authorIdx: 9, catIdx: 0, publisher: 'Addison-Wesley', total: 3, avail: 2 },
     { isbn: '978-0-06-231609-7', title: 'Sapiens: A Brief History of Humankind', authorIdx: 7, catIdx: 5, publisher: 'Harper', total: 6, avail: 5 },
     { isbn: '978-0-385-48001-7', title: 'The Wealth of Nations', authorIdx: 9, catIdx: 6, publisher: 'W. Strahan', total: 4, avail: 4 },
-    // One book with exactly 0 available copies (zero-stock return estimate test case)
     { isbn: '978-0-13-449416-6', title: 'Clean Architecture: A Craftsman’s Guide', authorIdx: 4, catIdx: 0, publisher: 'Prentice Hall', total: 2, avail: 0 },
   ];
 
@@ -100,15 +102,14 @@ export async function runSeed() {
     createdAt: now,
     updatedAt: now,
   }));
-  books.forEach(b => db.books.push(b));
 
-  // 4. Members (10 members, including 1 Inactive and 1 with 5 books issued)
+  // 4. Members
   const membersData = [
     { code: 'M001', name: 'Aarav Sharma', email: 'aarav.sharma@college.edu', phone: '+91 98765 43210', status: 'Active' },
     { code: 'M002', name: 'Diya Patel', email: 'diya.patel@college.edu', phone: '+91 98765 43211', status: 'Active' },
-    { code: 'M003', name: 'Rohan Gupta', email: 'rohan.gupta@college.edu', phone: '+91 98765 43212', status: 'Active' }, // Will have 5 books issued (borrow limit test)
+    { code: 'M003', name: 'Rohan Gupta', email: 'rohan.gupta@college.edu', phone: '+91 98765 43212', status: 'Active' },
     { code: 'M004', name: 'Ananya Verma', email: 'ananya.verma@college.edu', phone: '+91 98765 43213', status: 'Active' },
-    { code: 'M005', name: 'Kabir Mehta', email: 'kabir.mehta@college.edu', phone: '+91 98765 43214', status: 'Inactive' }, // INACTIVE member test
+    { code: 'M005', name: 'Kabir Mehta', email: 'kabir.mehta@college.edu', phone: '+91 98765 43214', status: 'Inactive' },
     { code: 'M006', name: 'Ishaan Nair', email: 'ishaan.nair@college.edu', phone: '+91 98765 43215', status: 'Active' },
     { code: 'M007', name: 'Meera Iyer', email: 'meera.iyer@college.edu', phone: '+91 98765 43216', status: 'Active' },
     { code: 'M008', name: 'Aditya Rao', email: 'aditya.rao@college.edu', phone: '+91 98765 43217', status: 'Active' },
@@ -127,9 +128,8 @@ export async function runSeed() {
     createdAt: now,
     updatedAt: now,
   }));
-  members.forEach(m => db.members.push(m));
 
-  // 5. Users (1 librarian + 2 student accounts linked to members)
+  // 5. Users
   const passwordHash = await bcrypt.hash('password123', 10);
 
   const librarianUser: User = {
@@ -140,7 +140,6 @@ export async function runSeed() {
     createdAt: now,
     updatedAt: now,
   };
-  db.users.push(librarianUser);
 
   const student1User: User = {
     id: 'usr_student_1',
@@ -152,7 +151,6 @@ export async function runSeed() {
     updatedAt: now,
   };
   members[0].userId = student1User.id;
-  db.users.push(student1User);
 
   const student2User: User = {
     id: 'usr_student_2',
@@ -164,87 +162,77 @@ export async function runSeed() {
     updatedAt: now,
   };
   members[1].userId = student2User.id;
-  db.users.push(student2User);
 
-  // 6. Transactions (Active, overdue, and returned)
-  // Let's create transactions keeping stock consistent:
-  // - Clean Architecture (bk_30, 0 available copies): loan 1 and loan 2 issued
-  const zeroCopyBook = books[books.length - 1]; // bk_30
-  
-  const tx1: Transaction = {
-    id: 'txn_101',
-    bookId: zeroCopyBook.id,
-    memberId: members[0].id,
-    issuedBy: librarianUser.id,
-    issueDate: addDays(today, -10),
-    dueDate: addDays(today, 4), // Due in 4 days
-    status: 'Issued',
-    createdAt: now,
-    updatedAt: now,
-    bookTitle: zeroCopyBook.title,
-    bookIsbn: zeroCopyBook.isbn,
-    memberCode: members[0].memberCode,
-    memberName: members[0].fullName,
-  };
-  db.transactions.push(tx1);
+  const users: User[] = [librarianUser, student1User, student2User];
 
-  const tx2: Transaction = {
-    id: 'txn_102',
-    bookId: zeroCopyBook.id,
-    memberId: members[1].id,
-    issuedBy: librarianUser.id,
-    issueDate: addDays(today, -12),
-    dueDate: addDays(today, 2), // Due in 2 days (earliest expected return: today + 2)
-    status: 'Issued',
-    createdAt: now,
-    updatedAt: now,
-    bookTitle: zeroCopyBook.title,
-    bookIsbn: zeroCopyBook.isbn,
-    memberCode: members[1].memberCode,
-    memberName: members[1].fullName,
-  };
-  db.transactions.push(tx2);
+  // 6. Transactions
+  const zeroCopyBook = books[books.length - 1];
+  const transactions: Transaction[] = [
+    {
+      id: 'txn_101',
+      bookId: zeroCopyBook.id,
+      memberId: members[0].id,
+      issuedBy: librarianUser.id,
+      issueDate: addDays(today, -10),
+      dueDate: addDays(today, 4),
+      status: 'Issued',
+      createdAt: now,
+      updatedAt: now,
+      bookTitle: zeroCopyBook.title,
+      bookIsbn: zeroCopyBook.isbn,
+      memberCode: members[0].memberCode,
+      memberName: members[0].fullName,
+    },
+    {
+      id: 'txn_102',
+      bookId: zeroCopyBook.id,
+      memberId: members[1].id,
+      issuedBy: librarianUser.id,
+      issueDate: addDays(today, -12),
+      dueDate: addDays(today, 2),
+      status: 'Issued',
+      createdAt: now,
+      updatedAt: now,
+      bookTitle: zeroCopyBook.title,
+      bookIsbn: zeroCopyBook.isbn,
+      memberCode: members[1].memberCode,
+      memberName: members[1].fullName,
+    },
+    {
+      id: 'txn_103',
+      bookId: books[0].id,
+      memberId: members[1].id,
+      issuedBy: librarianUser.id,
+      issueDate: addDays(today, -19),
+      dueDate: addDays(today, -5),
+      status: 'Issued',
+      createdAt: now,
+      updatedAt: now,
+      bookTitle: books[0].title,
+      bookIsbn: books[0].isbn,
+      memberCode: members[1].memberCode,
+      memberName: members[1].fullName,
+    },
+    {
+      id: 'txn_104',
+      bookId: books[2].id,
+      memberId: members[3].id,
+      issuedBy: librarianUser.id,
+      issueDate: addDays(today, -17),
+      dueDate: addDays(today, -3),
+      status: 'Issued',
+      createdAt: now,
+      updatedAt: now,
+      bookTitle: books[2].title,
+      bookIsbn: books[2].isbn,
+      memberCode: members[3].memberCode,
+      memberName: members[3].fullName,
+    },
+  ];
 
-  // Overdue Transaction 1 (Diya Patel, 1984, due 5 days ago -> ₹25 overdue)
-  const tx3: Transaction = {
-    id: 'txn_103',
-    bookId: books[0].id,
-    memberId: members[1].id,
-    issuedBy: librarianUser.id,
-    issueDate: addDays(today, -19),
-    dueDate: addDays(today, -5), // 5 days late
-    status: 'Issued',
-    createdAt: now,
-    updatedAt: now,
-    bookTitle: books[0].title,
-    bookIsbn: books[0].isbn,
-    memberCode: members[1].memberCode,
-    memberName: members[1].fullName,
-  };
-  db.transactions.push(tx3);
-
-  // Overdue Transaction 2 (Ananya Verma, Pride & Prejudice, due 3 days ago -> ₹15 overdue)
-  const tx4: Transaction = {
-    id: 'txn_104',
-    bookId: books[2].id,
-    memberId: members[3].id,
-    issuedBy: librarianUser.id,
-    issueDate: addDays(today, -17),
-    dueDate: addDays(today, -3), // 3 days late
-    status: 'Issued',
-    createdAt: now,
-    updatedAt: now,
-    bookTitle: books[2].title,
-    bookIsbn: books[2].isbn,
-    memberCode: members[3].memberCode,
-    memberName: members[3].fullName,
-  };
-  db.transactions.push(tx4);
-
-  // Member M003 (Rohan Gupta) with exactly 5 books issued (borrow limit test case)
   const rohanBooks = [books[5], books[6], books[10], books[14], books[15]];
   rohanBooks.forEach((b, idx) => {
-    db.transactions.push({
+    transactions.push({
       id: `txn_rohan_${idx + 1}`,
       bookId: b.id,
       memberId: members[2].id,
@@ -261,7 +249,6 @@ export async function runSeed() {
     });
   });
 
-  // Past Returned Transaction (for Aarav Sharma)
   const txPast: Transaction = {
     id: 'txn_past_1',
     bookId: books[11].id,
@@ -269,7 +256,7 @@ export async function runSeed() {
     issuedBy: librarianUser.id,
     issueDate: addDays(today, -30),
     dueDate: addDays(today, -16),
-    returnDate: addDays(today, -12), // Returned 4 days late
+    returnDate: addDays(today, -12),
     status: 'Returned',
     createdAt: now,
     updatedAt: now,
@@ -278,55 +265,62 @@ export async function runSeed() {
     memberCode: members[0].memberCode,
     memberName: members[0].fullName,
   };
-  db.transactions.push(txPast);
+  transactions.push(txPast);
 
-  // 7. Fines (1 Unpaid and 1 Paid fine)
-  // Unpaid Fine for Aarav Sharma (from txPast: 4 days late * ₹5 = ₹20)
-  const fine1: Fine = {
-    id: 'fine_1',
-    transactionId: txPast.id,
-    memberId: members[0].id,
-    daysLate: 4,
-    amount: 20,
-    status: 'Unpaid',
-    generatedOn: addDays(today, -12),
-    createdAt: now,
-    updatedAt: now,
-  };
-  db.fines.push(fine1);
+  // 7. Fines
+  const fines: Fine[] = [
+    {
+      id: 'fine_1',
+      transactionId: txPast.id,
+      memberId: members[0].id,
+      daysLate: 4,
+      amount: 20,
+      status: 'Unpaid',
+      generatedOn: addDays(today, -12),
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: 'fine_2',
+      transactionId: 'txn_past_old',
+      memberId: members[1].id,
+      daysLate: 3,
+      amount: 15,
+      status: 'Paid',
+      generatedOn: addDays(today, -14),
+      paidOn: addDays(today, -7),
+      collectedBy: librarianUser.id,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
 
-  // Paid Fine for Diya Patel (paid last week)
-  const fine2: Fine = {
-    id: 'fine_2',
-    transactionId: 'txn_past_old',
-    memberId: members[1].id,
-    daysLate: 3,
-    amount: 15,
-    status: 'Paid',
-    generatedOn: addDays(today, -14),
-    paidOn: addDays(today, -7),
-    collectedBy: librarianUser.id,
-    createdAt: now,
-    updatedAt: now,
-  };
-  db.fines.push(fine2);
+  await Promise.all([
+    db.authors.insertMany(authors.map(a => ({ ...a }))),
+    db.categories.insertMany(categories.map(c => ({ ...c }))),
+    db.books.insertMany(books.map(b => ({ ...b }))),
+    db.members.insertMany(members.map(m => ({ ...m }))),
+    db.users.insertMany(users.map(u => ({ ...u }))),
+    db.transactions.insertMany(transactions.map(t => ({ ...t }))),
+    db.fines.insertMany(fines.map(f => ({ ...f }))),
+  ]);
 
-  db.save();
-  console.log('✅ Database seeded successfully with 30 books, 10 members, loans, and demo users:');
-  console.log('   👨‍💼 Librarian: librarian@college.edu / password123');
-  console.log('   🎓 Student 1: aarav.sharma@college.edu / password123 (has 1 active loan, 1 history, 1 unpaid fine ₹20)');
-  console.log('   🎓 Student 2: diya.patel@college.edu / password123 (has 2 active loans, 1 overdue, 1 paid fine)');
-  console.log('   🎓 Student 3 (M003): rohan.gupta@college.edu (has 5 books issued - at borrow limit)');
-  console.log('   🚫 Member 5 (M005): kabir.mehta@college.edu (status Inactive)');
-  console.log('   📕 Book 30: "Clean Architecture" has 0 available copies (earliest return in 2 days)');
+  console.log('✅ MongoDB Atlas seeded successfully with 30 books, 10 members, loans, and demo users:');
+  console.log('   Librarian: librarian@college.edu / password123');
+  console.log('   Student 1: aarav.sharma@college.edu / password123 (1 active loan, 1 history, 1 unpaid fine ₹20)');
+  console.log('   Student 2: diya.patel@college.edu / password123 (2 active loans, 1 overdue, 1 paid fine)');
+  console.log('   Student 3 (M003): rohan.gupta@college.edu (5 active loans - borrow limit)');
+  console.log('   Member 5 (M005): kabir.mehta@college.edu (Inactive)');
 }
 
-// Auto-run if executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  runSeed()
+  connectDb()
+    .then(() => runSeed())
+    .then(() => closeDb())
     .then(() => process.exit(0))
-    .catch(err => {
+    .catch(async err => {
       console.error('Seed failed:', err);
+      await closeDb();
       process.exit(1);
     });
 }

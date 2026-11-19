@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { db } from '../config/db.ts';
+import { db, exactCaseInsensitive } from '../config/db.ts';
 import { generateToken } from '../middleware/auth.ts';
 import { AppError } from '../middleware/errorHandler.ts';
 
@@ -10,7 +10,10 @@ export class AuthService {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const user = db.users.find(u => u.email.toLowerCase() === normalizedEmail);
+    const user = await db.users.findOne(
+      { email: exactCaseInsensitive(normalizedEmail) },
+      { projection: { _id: 0 } }
+    );
 
     if (!user) {
       throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
@@ -28,10 +31,11 @@ export class AuthService {
       memberId: user.memberId,
     });
 
-    // Hydrate member details if student
     let member = null;
     if (user.memberId) {
-      member = db.members.find(m => m.id === user.memberId) || null;
+      member =
+        (await db.members.findOne({ id: user.memberId }, { projection: { _id: 0 } })) ||
+        null;
     }
 
     return {
@@ -57,14 +61,18 @@ export class AuthService {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check if user already exists
-    const existingUser = db.users.find(u => u.email.toLowerCase() === normalizedEmail);
+    const existingUser = await db.users.findOne(
+      { email: exactCaseInsensitive(normalizedEmail) },
+      { projection: { _id: 0 } }
+    );
     if (existingUser) {
       throw new AppError('Account is already activated. Please login.', 400, 'ALREADY_ACTIVATED');
     }
 
-    // Find registered member record with this email
-    const member = db.members.find(m => m.email.toLowerCase() === normalizedEmail);
+    const member = await db.members.findOne(
+      { email: exactCaseInsensitive(normalizedEmail) },
+      { projection: { _id: 0 } }
+    );
     if (!member) {
       throw new AppError(
         'Email not found in registered member records. Contact librarian to register first.',
@@ -73,7 +81,6 @@ export class AuthService {
       );
     }
 
-    // Hash password with bcrypt
     const passwordHash = await bcrypt.hash(password, 10);
     const userId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date().toISOString();
@@ -82,16 +89,19 @@ export class AuthService {
       id: userId,
       email: normalizedEmail,
       passwordHash,
-      role: 'student' as const, // Role is strictly enforced on the server
+      role: 'student' as const,
       memberId: member.id,
       createdAt: now,
       updatedAt: now,
     };
 
-    db.users.push(newUser);
-    member.userId = userId;
-    member.updatedAt = now;
-    db.save();
+    await db.users.insertOne({ ...newUser });
+    await db.members.updateOne(
+      { id: member.id },
+      { $set: { userId, updatedAt: now } }
+    );
+
+    const updatedMember = { ...member, userId, updatedAt: now };
 
     const token = generateToken({
       userId: newUser.id,
@@ -108,20 +118,22 @@ export class AuthService {
         email: newUser.email,
         role: newUser.role,
         memberId: newUser.memberId,
-        member,
+        member: updatedMember,
       },
     };
   }
 
-  public static getCurrentUser(userId: string) {
-    const user = db.users.find(u => u.id === userId);
+  public static async getCurrentUser(userId: string) {
+    const user = await db.users.findOne({ id: userId }, { projection: { _id: 0 } });
     if (!user) {
       throw new AppError('User not found', 404, 'USER_NOT_FOUND');
     }
 
     let member = null;
     if (user.memberId) {
-      member = db.members.find(m => m.id === user.memberId) || null;
+      member =
+        (await db.members.findOne({ id: user.memberId }, { projection: { _id: 0 } })) ||
+        null;
     }
 
     return {
